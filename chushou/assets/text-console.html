@@ -1,0 +1,366 @@
+<div id="chushou-text-console" style="display:grid;gap:12px">
+  <div data-document-picker hidden>
+    <label class="form-label" for="chushou-console-document">文档</label>
+    <select class="form-select" id="chushou-console-document"></select>
+  </div>
+  <div data-document-title></div>
+  <div class="text-small" data-current-version></div>
+  <div>
+    <label class="form-label" for="chushou-console-version">当前版本</label>
+    <div class="viz-row">
+      <button class="btn" type="button" data-previous aria-label="上一个版本">← 上一版</button>
+      <div style="flex:1;min-width:120px"><select class="form-select" id="chushou-console-version"></select></div>
+      <button class="btn" type="button" data-next aria-label="下一个版本">下一版 →</button>
+    </div>
+  </div>
+  <div>
+    <div class="viz-row">
+      <label class="form-label" for="chushou-console-editor" data-editor-label>正文</label>
+      <button class="btn btn-ghost" type="button" data-expand aria-controls="chushou-console-editor" aria-expanded="false">展开编辑</button>
+    </div>
+    <textarea class="form-control" id="chushou-console-editor" rows="16" spellcheck="false" aria-describedby="chushou-console-draft-note chushou-console-state-note"></textarea>
+  </div>
+  <div class="text-small" id="chushou-console-draft-note"></div>
+  <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" type="button" data-action="save">保存版本</button></div>
+  <div class="text-small text-muted" id="chushou-console-state-note"></div>
+  <div role="status" aria-live="polite" data-status></div>
+  <div class="text-destructive" role="alert" data-error hidden></div>
+  <script type="application/json" data-console-data>__CONSOLE_DATA_JSON__</script>
+</div>
+<script>
+(() => {
+  const root = document.getElementById("chushou-text-console");
+  if (!root) return;
+  const find = selector => root.querySelector(selector);
+  const ui = {
+    documentPicker: find("[data-document-picker]"), documentSelect: find("#chushou-console-document"),
+    title: find("[data-document-title]"), current: find("[data-current-version]"),
+    versionSelect: find("#chushou-console-version"), previous: find("[data-previous]"), next: find("[data-next]"),
+    editor: find("#chushou-console-editor"), editorLabel: find("[data-editor-label]"), expand: find("[data-expand]"),
+    draftNote: find("#chushou-console-draft-note"), stateNote: find("#chushou-console-state-note"),
+    status: find("[data-status]"), error: find("[data-error]"), save: find('[data-action="save"]')
+  };
+  const encoder = new TextEncoder();
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const byteLength = value => encoder.encode(JSON.stringify(value)).byteLength;
+  const fail = message => { ui.error.textContent = message; ui.error.hidden = false; };
+  const validateDocuments = docs => {
+    if (!Array.isArray(docs) || !docs.length) throw new Error("documents");
+    const ids = new Set();
+    for (const doc of docs) {
+      if (!doc || typeof doc.id !== "string" || !doc.id || ids.has(doc.id) ||
+          !["script", "prompt"].includes(doc.kind) || typeof doc.title !== "string" ||
+          !Number.isInteger(doc.revision) || doc.revision < 0 ||
+          !Array.isArray(doc.versions) || !doc.versions.length) throw new Error("document");
+      ids.add(doc.id);
+      const versionIds = new Set();
+      for (const version of doc.versions) {
+        if (!version || typeof version.id !== "string" || !version.id || versionIds.has(version.id) ||
+            typeof version.label !== "string" || typeof version.content !== "string" ||
+            !Number.isInteger(version.revision) || version.revision < 0 ||
+            typeof version.updated_at !== "string") throw new Error("version");
+        versionIds.add(version.id);
+      }
+      if (!versionIds.has(doc.current_version_id)) throw new Error("current version");
+    }
+  };
+  let seed;
+  try {
+    seed = JSON.parse(find("[data-console-data]").textContent);
+    if (seed.schema !== 1 || typeof seed.store_root !== "string" ||
+        !/^(?:[A-Za-z]:[\\/]|\/|\\\\)/.test(seed.store_root)) throw new Error("seed");
+    validateDocuments(seed.documents);
+  } catch (error) {
+    fail("操作台无法读取初始版本，请重新预览。");
+    root.querySelectorAll("button, select, textarea").forEach(control => { control.disabled = true; });
+    return;
+  }
+  // This signature matches the seed, not locally saved versions or their bodies.
+  const seedSignature = JSON.stringify(seed.documents.map(doc => ({
+    id: doc.id, revision: doc.revision, current_version_id: doc.current_version_id,
+    versions: doc.versions.map(version => ({ id: version.id, sha256: version.sha256 || [version.revision, version.updated_at, version.content.length] }))
+  })));
+  let documents = clone(seed.documents);
+  let selectedDocumentId = documents.some(doc => doc.id === seed.selected_document_id) ? seed.selected_document_id : documents[0].id;
+  let drafts = new Map();
+  let stateRevision = 0;
+  let expanded = false;
+  let saving = false;
+  let composing = false;
+  let locallyInteracted = false;
+  let stateTimer;
+  let pendingJob = null;
+  let workerRunning = false;
+  let restoreToken = 0;
+  const selectedDocument = () => documents.find(doc => doc.id === selectedDocumentId);
+  const selectedVersion = () => selectedDocument().versions.find(version => version.id === selectedDocument().current_version_id);
+  const draftKey = (docId, versionId) => JSON.stringify([docId, versionId]);
+  const dirty = () => ui.editor.value !== selectedVersion().content;
+  const rememberDraft = () => {
+    const key = draftKey(selectedDocumentId, selectedVersion().id);
+    if (dirty()) drafts.set(key, ui.editor.value); else drafts.delete(key);
+  };
+  const setOptions = (select, items, label) => {
+    select.replaceChildren();
+    for (const item of items) {
+      const option = document.createElement("option");
+      option.value = item.id; option.textContent = label(item); select.append(option);
+    }
+  };
+  const refreshControls = () => {
+    const doc = selectedDocument();
+    const index = doc.versions.findIndex(version => version.id === doc.current_version_id);
+    ui.previous.disabled = saving || index <= 0;
+    ui.next.disabled = saving || index >= doc.versions.length - 1;
+    ui.documentSelect.disabled = saving; ui.versionSelect.disabled = saving;
+    ui.editor.readOnly = saving; ui.save.disabled = saving;
+    ui.expand.disabled = saving; ui.editor.rows = expanded ? 40 : 16;
+    ui.expand.textContent = expanded ? "收起编辑" : "展开编辑";
+    ui.expand.setAttribute("aria-expanded", String(expanded));
+    ui.current.textContent = `当前显示：${selectedVersion().id} · ${selectedVersion().label}${dirty() ? "（修改中）" : ""}`;
+    ui.draftNote.textContent = dirty()
+      ? "修改尚未保存为新版本；当前显示的全文会自动同步。"
+      : "显示哪个版本，哪个就是当前版本；切换后自动同步全文。";
+  };
+  const render = () => {
+    const doc = selectedDocument();
+    ui.documentPicker.hidden = documents.length < 2;
+    setOptions(ui.documentSelect, documents, item => `${item.kind === "script" ? "脚本" : "提示词"} · ${item.title}`);
+    ui.documentSelect.value = doc.id; ui.title.textContent = doc.title;
+    setOptions(ui.versionSelect, doc.versions, version => `${version.id} · ${version.label}`);
+    ui.versionSelect.value = doc.current_version_id;
+    ui.editorLabel.textContent = doc.kind === "script" ? "脚本正文" : "提示词正文";
+    const key = draftKey(doc.id, doc.current_version_id);
+    ui.editor.value = drafts.has(key) ? drafts.get(key) : selectedVersion().content;
+    refreshControls();
+  };
+  const gzipAvailable = () => typeof CompressionStream === "function" && typeof DecompressionStream === "function";
+  const base64 = bytes => {
+    const chunks = [];
+    for (let index = 0; index < bytes.length; index += 4096) chunks.push(String.fromCharCode(...bytes.subarray(index, index + 4096)));
+    return btoa(chunks.join(""));
+  };
+  const readLimited = async stream => {
+    const reader = stream.getReader(); const chunks = []; let size = 0;
+    while (true) {
+      const result = await reader.read(); if (result.done) break;
+      size += result.value.byteLength;
+      if (size > 1000000) { await reader.cancel(); throw new Error("history-too-large"); }
+      chunks.push(result.value);
+    }
+    const output = new Uint8Array(size); let offset = 0;
+    for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.byteLength; }
+    return output;
+  };
+  const encodeArchive = async archive => {
+    const json = JSON.stringify(archive);
+    if (encoder.encode(json).byteLength > 1000000) throw new Error("history-too-large");
+    if (gzipAvailable()) {
+      try {
+        const stream = new Blob([json]).stream().pipeThrough(new CompressionStream("gzip"));
+        return { encoding: "gzip-base64", data: base64(await readLimited(stream)) };
+      } catch (error) { if (error.message === "history-too-large") throw error; }
+    }
+    return { encoding: "json", data: archive };
+  };
+  const decodeArchive = async archive => {
+    if (!archive || !["json", "gzip-base64"].includes(archive.encoding)) throw new Error("archive");
+    if (archive.encoding === "json") return clone(archive.data);
+    if (!gzipAvailable() || typeof archive.data !== "string") throw new Error("gzip-unavailable");
+    const bytes = Uint8Array.from(atob(archive.data), character => character.charCodeAt(0));
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readLimited(stream)));
+  };
+  const compactContent = (item, content) => {
+    const text = item.content;
+    let prefix = 0; let suffix = 0;
+    while (prefix < Math.min(text.length, content.length) && text[prefix] === content[prefix]) prefix += 1;
+    while (suffix < Math.min(text.length, content.length) - prefix &&
+           text[text.length - suffix - 1] === content[content.length - suffix - 1]) suffix += 1;
+    const delta = [prefix, text.slice(prefix, text.length - suffix), suffix];
+    if (byteLength({ content_delta_from_model: delta }) + 32 < byteLength({ content: text })) {
+      item.content_delta_from_model = delta; delete item.content;
+    }
+  };
+  const makeJob = (reason, sourceDocuments = documents, versionId = selectedVersion().id, committedDraftKey = null) => {
+    const doc = sourceDocuments.find(item => item.id === selectedDocumentId);
+    const version = doc.versions.find(item => item.id === versionId);
+    const content = ui.editor.value;
+    const modelContent = { console_schema: 3, store_root: seed.store_root, state_revision: stateRevision,
+      document_id: doc.id, version_id: version.id, kind: doc.kind, title: doc.title,
+      status: content === version.content ? "saved" : "draft", content };
+    const history = clone(sourceDocuments);
+    let historyBytes = modelContent.status === "draft" ? encoder.encode(content).byteLength : 0;
+    for (const item of history) for (const oldVersion of item.versions) historyBytes += encoder.encode(oldVersion.content).byteLength;
+    const current = history.find(item => item.id === doc.id).versions.find(item => item.id === version.id);
+    if (current.content === content) { delete current.content; current.content_from_model = true; }
+    for (const item of history) for (const oldVersion of item.versions) {
+      if (!oldVersion.content_from_model) compactContent(oldVersion, content);
+    }
+    const privateDrafts = [];
+    for (const [key, text] of drafts) {
+      const [docId, draftVersionId] = JSON.parse(key);
+      if (key !== committedDraftKey && (docId !== doc.id || draftVersionId !== version.id)) {
+        const draft = { document_id: docId, version_id: draftVersionId, content: text };
+        historyBytes += encoder.encode(text).byteLength; compactContent(draft, content); privateDrafts.push(draft);
+      }
+    }
+    return { revision: stateRevision, reason, modelContent, expanded, historyBytes, archive: { documents: history, drafts: privateDrafts } };
+  };
+  const syncFailure = error => {
+    ui.status.textContent = "本次修改尚未保存或同步；当前窗口中的正文已保留。";
+    ui.stateNote.textContent = error.message === "state-too-large"
+      ? "当前全文与版本历史超过 16 KiB，无法写入对话状态；当前窗口仍保留全文。"
+      : error.message === "history-too-large" ? "版本历史过大，无法写入对话状态；当前窗口仍可编辑。"
+      : error.message === "bridge-unavailable" ? "当前客户端未提供状态保存接口；编辑内容仅保留在当前窗口。"
+      : "对话状态写入未确认，后续消息可能收不到当前稿；可再次点击“保存版本”重试。";
+    fail("状态未写入，请以当前窗口保留的正文为准。");
+  };
+  const runWorker = async () => {
+    if (workerRunning) return;
+    workerRunning = true;
+    while (pendingJob) {
+      const job = pendingJob; pendingJob = null; let successful = false;
+      try {
+        const bridge = window.openai;
+        if (!bridge || typeof bridge.setWidgetState !== "function") throw new Error("bridge-unavailable");
+        if (job.historyBytes > 1000000) throw new Error("history-too-large");
+        const privateContent = { console_schema: 3, store_root: seed.store_root, seed_signature: seedSignature,
+          expanded: job.expanded, archive: await encodeArchive(job.archive) };
+        const state = { modelContent: job.modelContent, privateContent };
+        if (byteLength(state) >= 16384) throw new Error("state-too-large");
+        if (job.revision !== stateRevision) { if (job.resolve) job.resolve(false); continue; }
+        await bridge.setWidgetState(state); successful = true;
+        if (job.revision === stateRevision) {
+          ui.error.hidden = true; ui.stateNote.textContent = "";
+          if (job.reason !== "save") ui.status.textContent = "当前稿已同步到对话状态。";
+        }
+      } catch (error) { if (job.revision === stateRevision) syncFailure(error); }
+      if (job.resolve) job.resolve(successful);
+    }
+    workerRunning = false;
+  };
+  const enqueue = job => new Promise(resolve => {
+    if (pendingJob && pendingJob.resolve) pendingJob.resolve(false);
+    pendingJob = { ...job, resolve }; void runWorker();
+  });
+  const markInteraction = () => {
+    locallyInteracted = true; stateRevision += 1; clearTimeout(stateTimer);
+    ui.error.hidden = true; ui.stateNote.textContent = "";
+    ui.status.textContent = "当前显示已更新，等待同步。";
+  };
+  const scheduleSync = () => {
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(() => { if (!saving) void enqueue(makeJob("edit")); }, 400);
+  };
+  const switchSelection = change => {
+    if (saving) return;
+    rememberDraft(); markInteraction(); change(); render(); void enqueue(makeJob("switch"));
+  };
+  const save = async () => {
+    if (saving) return;
+    rememberDraft(); markInteraction();
+    const committedDraftKey = draftKey(selectedDocumentId, selectedVersion().id);
+    const candidate = clone(documents); const doc = candidate.find(item => item.id === selectedDocumentId);
+    let number = Math.max(0, ...doc.versions.map(version => /^v\d+$/.test(version.id) ? Number(version.id.slice(1)) : 0)) + 1;
+    while (doc.versions.some(version => version.id === `v${number}`)) number += 1;
+    const version = { id: `v${number}`, label: "保存稿", revision: doc.revision + 1, content: ui.editor.value, updated_at: new Date().toISOString() };
+    doc.versions.push(version); doc.current_version_id = version.id; doc.revision += 1;
+    saving = true; refreshControls(); ui.status.textContent = "正在保存到操作台…";
+    const successful = await enqueue(makeJob("save", candidate, version.id, committedDraftKey));
+    saving = false;
+    if (successful) {
+      documents = candidate; drafts.delete(committedDraftKey); render();
+      ui.status.textContent = `已保存到操作台（${version.id}）；当前稿已同步到对话状态。`;
+    } else refreshControls();
+  };
+  const restoreState = async state => {
+    const token = ++restoreToken;
+    if (!state || locallyInteracted || composing || saving) return;
+    const model = state.modelContent; const saved = state.privateContent;
+    if (!model || model.console_schema !== 3 || model.store_root !== seed.store_root ||
+        typeof model.content !== "string" || !Number.isInteger(model.state_revision) || model.state_revision < stateRevision ||
+        !["saved", "draft"].includes(model.status) || !saved || saved.console_schema !== 3 ||
+        saved.store_root !== seed.store_root || saved.seed_signature !== seedSignature || byteLength(state) >= 16384) return;
+    try {
+      const archive = await decodeArchive(saved.archive);
+      if (!archive || !Array.isArray(archive.documents) || !Array.isArray(archive.drafts)) throw new Error("archive");
+      let historyBytes = model.status === "draft" ? encoder.encode(model.content).byteLength : 0;
+      const restoreContent = item => {
+        if (!item || typeof item !== "object") throw new Error("content");
+        if (Object.prototype.hasOwnProperty.call(item, "content_delta_from_model")) {
+          const delta = item.content_delta_from_model;
+          if (!Array.isArray(delta) || delta.length !== 3 || !Number.isInteger(delta[0]) || delta[0] < 0 ||
+              !Number.isInteger(delta[2]) || delta[2] < 0 || delta[0] + delta[2] > model.content.length ||
+              typeof delta[1] !== "string" || typeof item.content !== "undefined" || item.content_from_model) throw new Error("content delta");
+          item.content = model.content.slice(0, delta[0]) + delta[1] + model.content.slice(model.content.length - delta[2]);
+          delete item.content_delta_from_model;
+        }
+        if (typeof item.content !== "string") throw new Error("content");
+        historyBytes += encoder.encode(item.content).byteLength;
+        if (historyBytes > 1000000) throw new Error("history-too-large");
+      };
+      for (const doc of archive.documents) {
+        if (!doc || !Array.isArray(doc.versions)) throw new Error("archive document");
+        for (const version of doc.versions) {
+          if (version.content_from_model) {
+            if (doc.id !== model.document_id || version.id !== model.version_id) throw new Error("content source");
+            version.content = model.content; delete version.content_from_model;
+          }
+          restoreContent(version);
+        }
+      }
+      for (const draft of archive.drafts) restoreContent(draft);
+      validateDocuments(archive.documents);
+      const doc = archive.documents.find(item => item.id === model.document_id);
+      const version = doc && doc.versions.find(item => item.id === model.version_id);
+      if (!version || doc.kind !== model.kind || doc.title !== model.title ||
+          model.status !== (model.content === version.content ? "saved" : "draft")) throw new Error("current model");
+      const restoredDrafts = new Map();
+      for (const draft of archive.drafts) {
+        const draftDoc = archive.documents.find(item => item.id === draft.document_id);
+        if (typeof draft.content !== "string" || !draftDoc || !draftDoc.versions.some(item => item.id === draft.version_id)) throw new Error("draft");
+        restoredDrafts.set(draftKey(draft.document_id, draft.version_id), draft.content);
+      }
+      if (model.status === "draft") restoredDrafts.set(draftKey(doc.id, version.id), model.content);
+      doc.current_version_id = version.id;
+      if (locallyInteracted || composing || saving || token !== restoreToken) return;
+      documents = archive.documents; selectedDocumentId = doc.id; drafts = restoredDrafts; stateRevision = model.state_revision;
+      expanded = saved.expanded === true;
+      render(); ui.status.textContent = "已恢复操作台保存的当前稿与版本历史。";
+    } catch (error) {
+      if (!locallyInteracted && token === restoreToken) ui.stateNote.textContent = "保存状态暂时无法恢复，当前显示初始稿；没有改写已有状态。";
+    }
+  };
+  if (seed.draft && typeof seed.draft.content === "string") {
+    const doc = documents.find(item => item.id === seed.draft.document_id);
+    if (doc && doc.versions.some(version => version.id === seed.draft.version_id)) {
+      selectedDocumentId = doc.id; doc.current_version_id = seed.draft.version_id;
+      drafts.set(draftKey(doc.id, seed.draft.version_id), seed.draft.content); locallyInteracted = true;
+    }
+  }
+  render(); void restoreState(window.openai && window.openai.widgetState);
+  window.addEventListener("openai:set_globals", event => {
+    const globals = event.detail && event.detail.globals;
+    if (globals && Object.prototype.hasOwnProperty.call(globals, "widgetState")) void restoreState(globals.widgetState);
+  });
+  ui.editor.addEventListener("compositionstart", () => { composing = true; clearTimeout(stateTimer); });
+  ui.editor.addEventListener("compositionend", () => { composing = false; scheduleSync(); });
+  ui.editor.addEventListener("input", () => {
+    if (saving) return;
+    markInteraction(); rememberDraft(); refreshControls(); if (!composing) scheduleSync();
+  });
+  ui.documentSelect.addEventListener("change", () => switchSelection(() => { selectedDocumentId = ui.documentSelect.value; }));
+  ui.versionSelect.addEventListener("change", () => switchSelection(() => { selectedDocument().current_version_id = ui.versionSelect.value; }));
+  const stepVersion = step => switchSelection(() => {
+    const doc = selectedDocument(); const index = doc.versions.findIndex(version => version.id === doc.current_version_id);
+    const version = doc.versions[index + step]; if (version) doc.current_version_id = version.id;
+  });
+  ui.previous.addEventListener("click", () => stepVersion(-1)); ui.next.addEventListener("click", () => stepVersion(1));
+  ui.expand.addEventListener("click", () => {
+    if (saving) return;
+    expanded = !expanded; markInteraction(); refreshControls(); void enqueue(makeJob("expand"));
+  });
+  ui.save.addEventListener("click", save);
+})();
+</script>

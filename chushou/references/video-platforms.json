@@ -1,0 +1,163 @@
+{
+  "providers": [
+    {
+      "id": "douyin",
+      "label": "抖音",
+      "hosts": [
+        "douyin.com",
+        "iesdouyin.com"
+      ],
+      "portalUrl": "https://dlpanda.com/zh-CN",
+      "portals": [
+        {
+          "url": "https://dlpanda.com/zh-CN",
+          "label": "DLPanda",
+          "requiresVpn": true
+        },
+        {
+          "url": "https://www.hellotik.app/zh/douyin",
+          "label": "HelloTik"
+        }
+      ],
+      "autoDownloadQuality": "highest"
+    },
+    {
+      "id": "tiktok",
+      "label": "TikTok",
+      "hosts": [
+        "tiktok.com"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        },
+        {
+          "url": "https://dlpanda.com/zh-CN",
+          "label": "DLPanda",
+          "requiresVpn": true
+        }
+      ]
+    },
+    {
+      "id": "bilibili",
+      "label": "哔哩哔哩",
+      "hosts": [
+        "bilibili.com",
+        "b23.tv"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        },
+        {
+          "url": "https://www.seekin.ai/zh/bilibili-downloader/",
+          "label": "Seekin Bilibili"
+        }
+      ]
+    },
+    {
+      "id": "xiaohongshu",
+      "label": "小红书",
+      "hosts": [
+        "xiaohongshu.com",
+        "xhslink.com"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        },
+        {
+          "url": "https://www.xiaohongshua.com/",
+          "label": "Xiaohongshua"
+        }
+      ]
+    },
+    {
+      "id": "kuaishou",
+      "label": "快手",
+      "hosts": [
+        "kuaishou.com",
+        "gifshow.com",
+        "kwai.com"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        },
+        {
+          "url": "https://www.hellotik.app/zh/kuaishou",
+          "label": "HelloTik"
+        }
+      ]
+    },
+    {
+      "id": "youtube",
+      "label": "YouTube",
+      "hosts": [
+        "youtube.com",
+        "youtu.be"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        }
+      ]
+    },
+    {
+      "id": "instagram",
+      "label": "Instagram",
+      "hosts": [
+        "instagram.com"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        }
+      ]
+    },
+    {
+      "id": "twitter",
+      "label": "Twitter / X",
+      "hosts": [
+        "twitter.com",
+        "x.com"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        }
+      ]
+    },
+    {
+      "id": "facebook",
+      "label": "Facebook",
+      "hosts": [
+        "facebook.com",
+        "fb.watch"
+      ],
+      "portalUrl": "https://www.seekin.ai/zh/downloader/",
+      "portals": [
+        {
+          "url": "https://www.seekin.ai/zh/downloader/",
+          "label": "Seekin"
+        }
+      ]
+    }
+  ],
+  "defaultSelection": "highest complete playable video; prefer an existing unwatermarked option without altering frames",
+  "portalNotes": "Portal availability must be checked at use time. Browser automation is performed through Codex computer-use, not copied Electron executeJavaScript code."
+}

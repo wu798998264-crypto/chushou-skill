@@ -1,0 +1,518 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Reference video key event ledger",
+  "description": "Agent-observed evidence record, not an automatic detector. Source PTS and local generation timing remain distinct; exact contact status requires original-frame-rate inspection.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "coverage",
+    "source_video",
+    "video_stream_index",
+    "source_fps",
+    "shot_id",
+    "continuous_take_id",
+    "shot_bounds_pts_s",
+    "observed_bounds_pts_s",
+    "assets",
+    "events",
+    "camera_phases",
+    "texture_evidence",
+    "uncertainties",
+    "independent_review",
+    "generated_review"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "coverage": {
+      "enum": [
+        "full_video",
+        "full_shot",
+        "shot_excerpt"
+      ]
+    },
+    "source_video": {
+      "type": "string",
+      "minLength": 1
+    },
+    "video_stream_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_fps": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "shot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "continuous_take_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "shot_bounds_pts_s": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "observed_bounds_pts_s": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "reference_asset_id",
+          "reference_status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "enum": [
+              "subject",
+              "character",
+              "vehicle",
+              "prop",
+              "scene",
+              "background_extra"
+            ]
+          },
+          "reference_asset_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reference_status": {
+            "enum": [
+              "existing",
+              "generated",
+              "scene_reuse",
+              "pending_confirmation",
+              "unregistered"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "order",
+          "bounds_pts_s",
+          "actor_ids",
+          "target_ids",
+          "action",
+          "entry_side",
+          "exit_side",
+          "motion_direction",
+          "speed_rhythm",
+          "contact",
+          "evidence"
+        ],
+        "properties": {
+          "order": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "bounds_pts_s": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "actor_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entry_side": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "top",
+              "bottom",
+              "upper_left",
+              "upper_right",
+              "lower_left",
+              "lower_right",
+              "already_in_frame",
+              "occluded",
+              "none",
+              "unresolved"
+            ]
+          },
+          "exit_side": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right",
+              "top",
+              "bottom",
+              "upper_left",
+              "upper_right",
+              "lower_left",
+              "lower_right",
+              "already_in_frame",
+              "occluded",
+              "none",
+              "unresolved"
+            ]
+          },
+          "motion_direction": {
+            "type": "string",
+            "minLength": 1
+          },
+          "speed_rhythm": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contact": {
+            "type": "object",
+            "required": [
+              "status",
+              "first_verified_pts_s",
+              "bounds_pts_s",
+              "evidence"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "exact_first_contact",
+                  "bracketed",
+                  "not_visible",
+                  "not_applicable"
+                ]
+              },
+              "first_verified_pts_s": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "bounds_pts_s": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "minItems": 2,
+                    "maxItems": 2
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "pts_s"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "pts_s": {
+                      "type": "number",
+                      "minimum": 0
+                    }
+                  }
+                }
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "pts_s"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pts_s": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "camera_phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "bounds_pts_s",
+          "location",
+          "movement",
+          "shake",
+          "evidence"
+        ],
+        "properties": {
+          "bounds_pts_s": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1
+          },
+          "movement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "shake": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "bounds_pts_s",
+                "observed_basis"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "none",
+                    "natural_handheld",
+                    "operator_reaction",
+                    "impact_vibration",
+                    "unresolved"
+                  ]
+                },
+                "bounds_pts_s": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "observed_basis": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "pts_s"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pts_s": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "texture_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "description",
+          "evidence"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "pts_s"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "pts_s": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "uncertainties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scope",
+          "description",
+          "next_action",
+          "ask_user"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "next_action": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ask_user": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "independent_review": {
+      "type": "object",
+      "required": [
+        "status",
+        "differences",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "pending_prompt_comparison",
+            "passed",
+            "needs_revision"
+          ]
+        },
+        "differences": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "generated_review": {
+      "type": "object",
+      "required": [
+        "status",
+        "differences"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "not_generated",
+            "pending",
+            "passed",
+            "needs_local_repair"
+          ]
+        },
+        "differences": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

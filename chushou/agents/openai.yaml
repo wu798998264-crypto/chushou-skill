@@ -1,0 +1,4 @@
+interface:
+  display_name: "触手"
+  short_description: "视频分析、原创脚本与演唱分镜，适配即梦、LibTV、神思等视频画布"
+  default_prompt: "使用 $chushou 按我指定的平台和制作阶段整理脚本、分镜及参考素材，准备可编辑版本与独立画布卡片。"
