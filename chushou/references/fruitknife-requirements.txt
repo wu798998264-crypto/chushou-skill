@@ -1,0 +1,6 @@
+requests>=2.31,<3
+pycryptodome>=3.19,<4
+betterproto==2.0.0b7
+gmssl>=3.2,<4
+imageio-ffmpeg==0.6.0
+Pillow>=10,<13

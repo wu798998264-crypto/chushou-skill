@@ -1,0 +1,44 @@
+{
+  "repository": "https://github.com/wu798998264-crypto/fruitknife",
+  "commit": "f25f1a4e7367d3e9eb0aa1ab80d0cfc11742d13c",
+  "rights": "Private / All rights reserved. User-requested local migration; no public redistribution grant.",
+  "scope": "Pure request-signing modules only; no GUI, device-registration, or automatic device rotation.",
+  "files": [
+    {
+      "path": "flurl/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "flurl/branch_one.py",
+      "sha256": "9360d3afc41f25fce8c406cd4d1a0da2b591fa8ef4d4e43897b1f16e52354e01"
+    },
+    {
+      "path": "flurl/core.py",
+      "sha256": "2291ca0458543a22fde9561600f319b54a48e38663c89319ed2ab363195a217f"
+    },
+    {
+      "path": "flurl/extra.py",
+      "sha256": "4bff58f280b5da3a2c3df92a888d51226c4769af0d69d44548332e7454571e29"
+    },
+    {
+      "path": "flurl/header.py",
+      "sha256": "6e0d8fb022c4fcfdd741bb3a3c7b9b574b40a2b4bedd0380d1a0a07e5a0209d6"
+    },
+    {
+      "path": "flurl/helios.py",
+      "sha256": "f8e2b00ef721559a3463b70c90bdd4b3538aaa6829dc893363fd51cc65e0018f"
+    },
+    {
+      "path": "flurl/medusa.py",
+      "sha256": "5a4b5ef42be01f0c66fe6ecefe8c51df94f617945bbbb13ce4a342cdc16c7fb7"
+    },
+    {
+      "path": "flurl/sign_proto.py",
+      "sha256": "4d74fee5b611eec37fc711372e3849fff6970c32ac4cfff73784170b7e424fa7"
+    },
+    {
+      "path": "flurl/xgorgon.py",
+      "sha256": "3b168530431990f3432f567037b0e53da90084ce8b8cd766959073d9fbc209fb"
+    }
+  ]
+}

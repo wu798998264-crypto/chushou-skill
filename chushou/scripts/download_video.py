@@ -23,11 +23,15 @@ import urllib.parse
 import urllib.request
 import uuid
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from inspect_video import find_ffmpeg, find_ffprobe, metadata
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
 VIDEO_EXTENSIONS = {".mp4", ".m4v", ".mov", ".mkv", ".webm", ".avi", ".flv", ".ts", ".mpeg", ".mpg"}
 PROVIDERS = {
+    "hongguo": ("novelquickapp.com", "hongguoduanju.com"),
     "douyin": ("douyin.com", "iesdouyin.com"),
     "tiktok": ("tiktok.com",),
     "bilibili": ("bilibili.com", "b23.tv"),
@@ -366,12 +370,31 @@ def main():
     parser.add_argument("--timeout", type=int, default=30)
     parser.add_argument("--interval", type=float, default=1.0)
     parser.add_argument("--timestamps", help="Explicit comma-separated inspection timestamps")
+    episodes = parser.add_mutually_exclusive_group()
+    episodes.add_argument("--episodes", help="Hongguo episode selection, for example 1,3-5")
+    episodes.add_argument("--all-episodes", action="store_true", help="Explicitly download the complete Hongguo episode list")
+    parser.add_argument("--quality", choices=("360p", "480p", "540p", "720p", "1080p"), default="1080p", help="Hongguo requested quality; actual quality is recorded")
     args = parser.parse_args()
     root = None
     try:
         if args.timeout <= 0 or not math.isfinite(args.interval) or args.interval <= 0:
             raise DownloadError("Timeout and inspection interval must be positive")
         share_text = Path(args.source_file).read_text(encoding="utf-8-sig") if args.source_file else args.source
+        from fruitknife_provider import FruitknifeClient, is_hongguo_source
+        if is_hongguo_source(share_text) and not (args.media_url or args.media_url_file):
+            if not (args.episodes or args.all_episodes):
+                series = FruitknifeClient(args.timeout).inspect(share_text)
+                print(json.dumps({"status": "selection_required", **series,
+                                  "next_step": "Specify --episodes or --all-episodes; no episode has been downloaded"}, ensure_ascii=False, indent=2))
+                return 2
+            from download_drama import download_selection
+            result = download_selection(share_text, args.out_dir, args.episodes, args.all_episodes,
+                                        args.quality, args.download_only, args.ffmpeg, args.ffprobe,
+                                        args.timeout, args.interval, args.timestamps)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result["selection_complete"] else 2
+        if args.episodes or args.all_episodes:
+            raise DownloadError("Episode selection applies only to supported Hongguo sources")
         url = extract_url(share_text)
         media_value = Path(args.media_url_file).read_text(encoding="utf-8-sig").strip() if args.media_url_file else args.media_url
         media_url = valid_url(media_value) if media_value else None

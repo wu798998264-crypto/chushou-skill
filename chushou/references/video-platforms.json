@@ -1,6 +1,14 @@
 {
   "providers": [
     {
+      "id": "hongguo",
+      "label": "红果短剧",
+      "hosts": ["novelquickapp.com", "hongguoduanju.com"],
+      "adapter": "fruitknife",
+      "portals": [],
+      "autoDownloadQuality": "highest_available_up_to_requested"
+    },
+    {
       "id": "douyin",
       "label": "抖音",
       "hosts": [

@@ -15,6 +15,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from fruitknife_runtime import activate_packages
+
+activate_packages()
+
 
 def run(args):
     return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -43,7 +50,22 @@ def find_ffmpeg(value):
         import imageio_ffmpeg
         return imageio_ffmpeg.get_ffmpeg_exe()
     except (ImportError, RuntimeError):
-        raise ValueError("FFmpeg was not found; supply --ffmpeg PATH. Nothing was installed.")
+        pass
+    # Optional compatibility for existing users; a fresh installation uses
+    # fruitknife_runtime's own dependencies and bundled FFmpeg above.
+    # This keeps existing users working without copying an 80+ MB executable.
+    skill_root = Path(__file__).resolve().parent.parent
+    binary = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
+    for runtime in (skill_root / "runtime" / "ffmpeg",
+                    skill_root.parent / "daozei-de-jiyi" / "runtime" / "ffmpeg"):
+        candidate = runtime / binary
+        if candidate.is_file():
+            return str(candidate)
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except (ImportError, RuntimeError):
+        raise ValueError("FFmpeg was not found; supply --ffmpeg PATH or run python scripts/fruitknife_runtime.py --install")
 
 
 def find_ffprobe(value, ffmpeg):

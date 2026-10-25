@@ -1,0 +1,36 @@
+name: Short-drama download portability
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'chushou/scripts/**'
+      - 'chushou/references/fruitknife-*'
+      - '.github/workflows/download-portability.yml'
+  pull_request:
+    paths:
+      - 'chushou/scripts/**'
+      - 'chushou/references/fruitknife-*'
+      - '.github/workflows/download-portability.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install without author runtime or credentials
+        run: python -I chushou/scripts/fruitknife_runtime.py --install
+      - name: Check runtime
+        run: python -I chushou/scripts/fruitknife_runtime.py --check
+      - name: Download, decode, resume and extract local test videos
+        run: python -I chushou/scripts/test_fruitknife_download.py
