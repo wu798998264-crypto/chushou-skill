@@ -35,7 +35,7 @@ python scripts/download_drama.py download --source-file output/drama/source.txt 
 
 ## 2. 可选后台：建立逐集来源与识别任务映射
 
-读取 [audio-transcription.md](audio-transcription.md)，在神思的专用转写笔记本／白板中复用或登记这批已下载视频源，只建必要的来源索引，不建立视频生成卡片。按实际文件SHA复用已有资产，使用原生附件导入与托管路径；超过JSON导入上限的原片用神思真实multipart导入，不把外部绝对路径伪装为附件relativePath。接口与安装位置按 [shensi-generation.md](shensi-generation.md) 的动态发现规则取得。
+读取 [audio-transcription.md](audio-transcription.md)，在神思的专用转写笔记本／白板中复用或登记这批已下载视频源，只建必要的来源索引，不建立视频生成卡片。按实际文件SHA复用已有资产，使用原生附件导入与托管路径；超过JSON导入上限先核实当前协议是否支持大文件导入，旧引擎已知的multipart方式不能直接套到新版神思笔记。不把外部绝对路径伪装为附件relativePath。接口与安装位置按 [shensi-generation.md](shensi-generation.md) 的动态发现规则取得；后台转写队列仍须确认该版本真实提供，不能因画布默认新版而冒称后台API也已迁移。
 
 默认将原视频节点提交给后台，由后台提取完整音轨，因此job.sourceSha256对应原视频。若明确使用预提取音轨，必须分别记录视频SHA与音轨SHA，不能把两者混写。
 
