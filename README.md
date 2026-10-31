@@ -10,6 +10,8 @@
 npx skills add wu798998264-crypto/chushou-skill --skill chushou -g
 ```
 
+v1.6.0 的小说搜索、下载及改编流程更新目前通过仓库 `main` 提供，请使用上面的命令获取。现有 Release 完整安装包仍为 v1.5.0；本次不重新打包旧版第三方模块，也不发布任何小说正文或用户项目素材。
+
 下载 [最新发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后把 **`chushou` 文件夹**放进你的 Skills 目录：
 
 - Codex：`~/.codex/skills/chushou/`；Windows 通常为 `%USERPROFILE%\.codex\skills\chushou\`。
