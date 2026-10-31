@@ -65,7 +65,18 @@ const privateIp = (address = "") => {
   const normalized = String(address).toLowerCase();
   if (isIP(normalized) === 4) return privateIpv4(normalized);
   if (isIP(normalized) !== 6) return true;
-  return normalized === "::" || normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || /^fe[89ab]/.test(normalized);
+  // Canonicalize numeric IPv6 only (no DNS/network access), including expanded
+  // and dotted-tail spellings, before checking local or IPv4-mapped addresses.
+  let canonical;
+  try { canonical = new URL(`http://[${normalized}]/`).hostname.slice(1, -1); }
+  catch { return true; }
+  const mapped = canonical.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (mapped) {
+    const high = parseInt(mapped[1], 16);
+    const low = parseInt(mapped[2], 16);
+    return privateIpv4(`${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`);
+  }
+  return canonical === "::" || canonical === "::1" || canonical.startsWith("fc") || canonical.startsWith("fd") || /^fe[89ab]/.test(canonical);
 };
 
 const resolveQuanbenTarget = async (value, { lookupImpl = lookup } = {}) => {
