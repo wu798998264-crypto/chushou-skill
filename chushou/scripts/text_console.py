@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Disk seeds and compatible explicit exports for the chushou inline console.
+"""Persistent versions for the chushou Shensi writing editor.
 
-The live console keeps its current text in widget state. Inline saves do not
-send a chat message or call this CLI and do not write disk files. ``current``
-reads the disk's initial seed/legacy export, not the live widget's current text.
-``render`` packages versions into a trusted UI file and returns metadata only;
-never load that HTML as downstream script/prompt context. Legacy publish/apply
-remain available only when an explicit disk operation is requested.
+``serve`` opens the shared editor against this project store. ``current`` reads
+only the selected saved version, never an unsaved draft. Older inline widgets
+keep separate runtime state: their disk seed is not their latest text and must
+not be silently migrated. ``render-legacy`` is explicit compatibility only.
 """
 
 from __future__ import annotations
@@ -35,7 +33,7 @@ TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "text-console.htm
 
 
 class ConsoleError(Exception):
-    """An invalid operation which must not change the legacy disk store."""
+    """An invalid operation which must not change the disk store."""
 
 
 def digest(data: bytes) -> str:
@@ -138,6 +136,7 @@ def load_manifest(root, allow_empty=False):
         if (not isinstance(doc, dict) or doc.get("id") != document_id or
                 doc.get("kind") not in ("script", "prompt") or
                 not isinstance(doc.get("title"), str) or not integer(doc.get("revision"), 1) or
+                not integer(doc.get("writing_instruction_revision", 0)) or
                 not isinstance(doc.get("versions"), list) or not doc["versions"]):
             raise ConsoleError(f"文档清单无效：{document_id}")
         seen = set()
@@ -272,8 +271,7 @@ def publish(store, document_id, kind, title, source_file, label="", expected_rev
             manifest["documents"][document_id] = doc
         elif doc["kind"] != kind:
             raise ConsoleError("已有文档的类型不能更改")
-        # An explicit disk publish checks only its current seed/export body.
-        # Archived bodies are unnecessary here; live UI edits are widget state.
+        # Only the selected saved body is needed; drafts are never a baseline.
         if doc["versions"]:
             read_version(root, doc, get_version(doc))
         doc["title"] = title
@@ -379,8 +377,12 @@ def apply_request(store, request_file):
         return receipt
 
 
-def current(store, document_id=None, output_file=None):
-    """Read one disk seed/explicit export body, not the live widget's current text."""
+def current(store, document_id=None, output_file=None, accept_instruction=False):
+    """Read saved text; optionally mark an actual accepted follow-up instruction.
+
+    The optional signal folds the existing editor, without posting a message,
+    selecting another version, changing saved text, or treating drafts as input.
+    """
     with locked_store(store) as root:
         manifest = load_manifest(root)
         doc = get_document(manifest, document_id)
@@ -397,6 +399,11 @@ def current(store, document_id=None, output_file=None):
                 raise ConsoleError("导出路径不能位于权威文本版本存储内")
             atomic_write(output, content.encode("utf-8"))
             result["output_file"] = str(output)
+        if accept_instruction:
+            old = copy.deepcopy(manifest)
+            doc["writing_instruction_revision"] = doc.get("writing_instruction_revision", 0) + 1
+            commit(root, old, manifest, doc, version)
+            result["instruction_revision"] = doc["writing_instruction_revision"]
         return result
 
 
@@ -465,10 +472,10 @@ def render(store, output, document_id=None, draft_request=None):
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("publish", "list", "current", "render", "apply"):
+    for name in ("publish", "list", "current", "drafts", "serve", "render-legacy", "apply"):
         command = commands.add_parser(name)
         command.add_argument("--store", required=True, help="Trusted, registered project text store")
-        if name in ("publish", "current", "render"):
+        if name in ("publish", "current", "drafts", "serve", "render-legacy"):
             command.add_argument("--document", required=name == "publish")
         if name == "publish":
             command.add_argument("--kind", required=True, choices=("script", "prompt"))
@@ -478,7 +485,11 @@ def build_parser():
             command.add_argument("--expected-revision", type=int)
         elif name == "current":
             command.add_argument("--output-file")
-        elif name == "render":
+            command.add_argument("--accept-instruction", action="store_true",
+                                 help="Mark a real accepted follow-up instruction; folds the existing long editor")
+        elif name == "serve":
+            command.add_argument("--resume-client", help="Explicit client ID from drafts; never auto-select another client's draft")
+        elif name == "render-legacy":
             command.add_argument("--output", required=True)
             command.add_argument("--draft-request", help="Rejected save JSON/envelope; restore as unsaved draft only")
         elif name == "apply":
@@ -498,8 +509,14 @@ def main():
         elif args.command == "list":
             result = list_documents(args.store)
         elif args.command == "current":
-            result = current(args.store, args.document, args.output_file)
-        elif args.command == "render":
+            result = current(args.store, args.document, args.output_file, args.accept_instruction)
+        elif args.command == "serve":
+            from writing_editor import serve
+            return serve(args.store, args.document, args.resume_client)
+        elif args.command == "drafts":
+            from writing_editor import list_drafts
+            result = list_drafts(args.store, args.document)
+        elif args.command == "render-legacy":
             result = render(args.store, args.output, args.document, args.draft_request)
         else:
             result = apply_request(args.store, args.request_file)

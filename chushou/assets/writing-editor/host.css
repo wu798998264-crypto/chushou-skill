@@ -1,0 +1,22 @@
+/* Shensi host primitives plus the user's compact single-row toolbar layout.
+   Editing and persistence remain in the shared writing component. */
+:root{color-scheme:light;--bg:#fff;--side:#f7f7f8;--hover:#eeeef0;--text:#202127;--muted:#85858f;--line:#e7e7eb;--accent:#4568e8;--soft:#edf1ff;--danger:#bb4349;--shadow:0 16px 55px #1818271a;font-family:'Segoe UI','Microsoft YaHei',sans-serif;font-size:13px;font-synthesis:none}
+:root[data-theme=dark]{color-scheme:dark;--bg:#18191d;--side:#131417;--hover:#292b31;--text:#e5e6ec;--muted:#8b8e9c;--line:#30323a;--accent:#91a5ff;--soft:#272f49;--danger:#ff8990;--shadow:0 16px 55px #0005}
+*{box-sizing:border-box}body{margin:0;overflow:hidden;color:var(--text);background:var(--bg)}button,input,textarea,select{font:inherit;color:inherit}button{border:0;background:transparent;border-radius:6px;padding:7px 9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}button:hover{background:var(--hover)}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}button:disabled{opacity:.45;cursor:default}svg{width:18px;height:18px;flex:none}svg[aria-hidden=true]{shape-rendering:geometricPrecision;stroke-linecap:round;stroke-linejoin:round}.primary{background:var(--accent);color:var(--bg)}.primary:hover{filter:brightness(.94);background:var(--accent)}select option{color:var(--text);background:var(--bg)}[hidden]{display:none!important}
+.original-icon{font-family:'Segoe Fluent Icons','Segoe MDL2 Assets';font-size:15px;font-weight:400;display:inline-block;line-height:1;white-space:nowrap}.original-icon.soft-icon{width:18px;height:18px;vertical-align:middle}
+dialog{border:1px solid var(--line);border-radius:12px;color:var(--text);background:var(--bg);width:440px;max-width:90vw;padding:26px;box-shadow:var(--shadow)}dialog::backdrop{background:#17192533;backdrop-filter:blur(2px)}dialog h2{font-size:18px;font-weight:600;margin:0 0 18px}dialog p{line-height:1.8;font-size:13px;color:var(--muted)}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+#toast{position:fixed;bottom:45px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);border-radius:8px;padding:11px 18px;z-index:2000;box-shadow:var(--shadow);max-width:70vw;font-size:12px;display:none}
+.shensi-chat{height:100dvh;display:flex;flex-direction:column;min-width:0}.host-heading{height:40px;flex:none;padding:10px 18px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.chat-messages{flex:1;min-height:0;overflow:auto;padding:0 18px 24px}.writing-placeholder{min-width:0}
+
+/* Keep one header in both reading/folded and editing states. */
+.shensi-chat .chat-messages:has(.writing-sheet)>:first-child{margin-top:4px}
+.writing-sheet .writing-head{width:100%;min-width:0;flex-wrap:nowrap;justify-content:flex-start;padding:3px 8px;gap:3px}
+.writing-sheet #document-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}
+.writing-sheet.is-editing #document-title{display:none}
+.writing-sheet [data-writing-action=expand]{display:none!important}
+.writing-sheet.is-editing [data-writing-action=copy]{margin-left:auto}
+.writing-sheet.is-editing [data-writing-action=save]{margin-left:0}
+.writing-sheet.is-editing [data-writing-action=edit]{margin-left:0}
+.writing-sheet .writing-status{min-height:16px;padding:0 10px 2px;line-height:14px}
+.writing-sheet .writing-body{padding:8px 16px 24px}
+.writing-sheet .writing-folded{padding:6px 16px 12px}
