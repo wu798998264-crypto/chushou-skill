@@ -10,9 +10,9 @@
 npx skills add wu798998264-crypto/chushou-skill --skill chushou -g
 ```
 
-最新版小说搜索、下载、改编流程与写作编辑器通过仓库 `main` 提供。仓库为私有仓库，安装／更新前须使用有访问权限的 GitHub 账号登录。现有 Release 完整安装包仍为 v1.5.0，未包含新版编辑器；本次更新请从 `main` 获取，不重新打包旧版第三方模块，也不发布任何小说正文或用户项目素材。
+最新版小说搜索、下载、改编流程与写作编辑器通过仓库 `main` 提供。现有 Release 完整安装包仍为 v1.5.0，未包含新版编辑器；本次更新请从 `main` 获取，不重新打包旧版第三方模块，也不发布任何小说正文或用户项目素材。
 
-下载 [最新发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后把 **`chushou` 文件夹**放进你的 Skills 目录：
+下载 [最新版仓库压缩包](https://github.com/wu798998264-crypto/chushou-skill/archive/refs/heads/main.zip)，解压后把 **`chushou` 文件夹**放进你的 Skills 目录：
 
 - Codex：`~/.codex/skills/chushou/`；Windows 通常为 `%USERPROFILE%\.codex\skills\chushou\`。
 - 其他支持 `SKILL.md` 的 Agent：放进该宿主的 Skills 目录，按宿主方式重新加载。
