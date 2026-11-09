@@ -23,7 +23,7 @@ description: 触手：短视频复刻与漫剧生产双线工作流。支持视�
 
 ## 短剧下载、转写与校对
 
-用户要求红果短剧下载、短剧视频转文字、逐集全文稿、错别字校对或按集整理文档时，读取 [references/drama-transcription.md](references/drama-transcription.md)。按本次范围串联水果刀下载、网站逐集转写、基于原音／字幕的校对和一句一行的单文档交付；已有源片或转写直接从相应阶段续接，不重复下载／识别。单独文稿任务不触发分镜、图片或视频；已明确进入漫剧改编线时，校订文稿完成后接全集大纲与人工改编节点。只要求完善流程时不处理具体作品。
+用户要求红果短剧下载、短剧视频转文字、逐集全文稿、错别字校对或按集整理文档时，读取 [references/drama-transcription.md](references/drama-transcription.md)。按本次范围串联红果下载器下载、网站逐集转写、基于原音／字幕的校对和一句一行的单文档交付；已有源片或转写直接从相应阶段续接，不重复下载／识别。单独文稿任务不触发分镜、图片或视频；已明确进入漫剧改编线时，校订文稿完成后接全集大纲与人工改编节点。只要求完善流程时不处理具体作品。
 
 短剧文稿默认使用 [Transcriber 网站](https://transcriber.tools.ryusei.io/en)，按 [references/website-transcription.md](references/website-transcription.md) 的实际页面操作。网站浏览器内推理、本地 faster-whisper 与神思 Fun-ASR 后台是不同路线，不能混称等价或静默替换。原始结果、逐项校对依据、标点稿分开保留；按 [references/transcript-proofreading.md](references/transcript-proofreading.md) 用随包工具校验及编排。拿不准的内容保留原文并列待核，不凭语义补对白、不全局替换单字；逐字门禁只证明编排未擅改校订内容，不能证明ASR无漏句。
 
@@ -86,8 +86,8 @@ description: 触手：短视频复刻与漫剧生产双线工作流。支持视�
 
 使用参考视频时执行本节；仅提供原创脚本时按原创入口处理，不要求视频下载、源帧或实测 PTS。
 
-1. 本地视频直接使用。链接或分享文案先读 [references/video-download.md](references/video-download.md)，调用 [scripts/download_video.py](scripts/download_video.py) 解析、下载到当前项目 `downloads`，下载完成并校验后自动产出分析材料。红果剧名、分享链接、`series_id` 或指定集数先读 [references/fruitknife-download.md](references/fruitknife-download.md)，使用移植自fruitknife的无界面入口搜索、核对剧集目录并选集下载；只有用户明确要求整部时才下载整部。普通网页解析失败时按迁移自玄念的主／备用解析站继续处理；不能把失败网页、封面、试看或未完整落盘的文件当作原片。下载器产生元数据、抽帧和音轨，不会自行写剧本。确认成功的本地视频路径后继续以下核对与分镜，不能停在「下载好了」。
-   红果首次使用由随包的[scripts/fruitknife_runtime.py](scripts/fruitknife_runtime.py)自动初始化独立依赖与FFmpeg；只依赖当前宿主的Python3.11+、pip和公开网络，不依赖作者机器、旧技能目录或fruitknife私有仓库。用`--check`可检查就绪状态；未通过不冒称可用。分发包需包含该初始化脚本、下载模块、签名源码及依赖清单，并从无runtime的副本验收，不能只验证作者已安装环境。
+1. 本地视频直接使用。链接或分享文案先读 [references/video-download.md](references/video-download.md)，调用 [scripts/download_video.py](scripts/download_video.py) 解析、下载到当前项目 `downloads`，下载完成并校验后自动产出分析材料。红果剧名、分享链接、`series_id` 或指定集数先读 [references/hongguo-download.md](references/hongguo-download.md)，使用移植自 hongguo-downloader 1.0.4的无界面入口搜索、核对剧集目录并选集下载；只有用户明确要求整部时才下载整部。普通网页解析失败时按迁移自玄念的主／备用解析站继续处理；不能把失败网页、封面、试看或未完整落盘的文件当作原片。下载器产生元数据、抽帧和音轨，不会自行写剧本。确认成功的本地视频路径后继续以下核对与分镜，不能停在「下载好了」。
+   红果首次使用由随包的[scripts/chushou_runtime.py](scripts/chushou_runtime.py)自动初始化独立依赖与FFmpeg；依赖当前宿主的Python3.11+、Node.js22+、pip和公开网络，不依赖作者机器、旧技能目录或fruitknife私有仓库。用`--check`可检查就绪状态；未通过不冒称可用。分发包需包含该初始化脚本、下载模块、签名源码及依赖清单，并从无runtime的副本验收，不能只验证作者已安装环境。
 2. 核对视频、角色替换参考图和用户约束，先查当前对话与项目已有资产，已有参考图直接复用。
 3. 读取时长、分辨率、帧率和音轨，确认实际运动视频流，不能把附带封面当视频。低频抽帧仅用于全片总览；逐镜观察起点、中段、终点，快速动作以连续序列复核，按需加密到6–12fps，接触瞬间与疑似切点附近按原帧率复核。动态与切点依据真实解码时间，细节与质感依据清晰原分辨率帧，不能凭一张静帧猜整段动作。
 4. 可使用 [scripts/inspect_video.py](scripts/inspect_video.py) 提取总览与音轨，再用 [scripts/inspect_motion.py](scripts/inspect_motion.py) 对指定动作区间连续解码、加密取帧并记录实际PTS。使用见 [references/video-inspection.md](references/video-inspection.md)。下载器已经生成的材料直接复用；脚本不能代替视觉和台词核对。

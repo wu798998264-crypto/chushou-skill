@@ -380,10 +380,10 @@ def main():
         if args.timeout <= 0 or not math.isfinite(args.interval) or args.interval <= 0:
             raise DownloadError("Timeout and inspection interval must be positive")
         share_text = Path(args.source_file).read_text(encoding="utf-8-sig") if args.source_file else args.source
-        from fruitknife_provider import FruitknifeClient, is_hongguo_source
+        from hongguo_provider import HongguoClient, is_hongguo_source
         if is_hongguo_source(share_text) and not (args.media_url or args.media_url_file):
             if not (args.episodes or args.all_episodes):
-                series = FruitknifeClient(args.timeout).inspect(share_text)
+                series = HongguoClient(args.timeout).inspect(share_text)
                 print(json.dumps({"status": "selection_required", **series,
                                   "next_step": "Specify --episodes or --all-episodes; no episode has been downloaded"}, ensure_ascii=False, indent=2))
                 return 2

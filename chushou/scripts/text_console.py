@@ -486,7 +486,7 @@ def build_parser():
         elif name == "current":
             command.add_argument("--output-file")
             command.add_argument("--accept-instruction", action="store_true",
-                                 help="Mark a real accepted follow-up instruction; folds the existing long editor")
+                                 help="Mark a real accepted follow-up instruction without changing editor layout")
         elif name == "serve":
             command.add_argument("--resume-client", help="Explicit client ID from drafts; never auto-select another client's draft")
         elif name == "render-legacy":

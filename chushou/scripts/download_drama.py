@@ -21,14 +21,20 @@ if __package__ in (None, ""):
 from download_video import (DownloadError, contained, digest, direct_download, find_reusable,
                             inspect_asset, now, safe_error, validate_video, write_new_json)
 from inspect_video import find_ffmpeg, find_ffprobe
-from fruitknife_provider import FruitknifeClient, QUALITIES, ROOT, UPSTREAM, parse_episodes
+from hongguo_provider import HongguoClient, QUALITIES, ROOT, UPSTREAM, parse_episodes
 
 
 def ffmpeg_path(value=None):
-    from fruitknife_runtime import activate_packages
+    from chushou_runtime import activate_packages, ensure_runtime
     activate_packages()
     bundled = ROOT.parent / "runtime" / "ffmpeg" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
-    return find_ffmpeg(value or (str(bundled) if bundled.is_file() else None))
+    try:
+        return find_ffmpeg(value or (str(bundled) if bundled.is_file() else None))
+    except ValueError:
+        if value:
+            raise
+        ensure_runtime()
+        return find_ffmpeg(None)
 
 
 def save_optional(path, data):
@@ -46,7 +52,7 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                        interval=1.0, timestamps=None, client=None):
     if quality not in QUALITIES or timeout <= 0 or interval <= 0:
         raise DownloadError("Quality, timeout or inspection interval is invalid")
-    client = client or FruitknifeClient(timeout)
+    client = client or HongguoClient(timeout)
     series = client.inspect(source)
     selected = parse_episodes(episodes, series["total_episodes"], all_episodes)
     ffmpeg = ffmpeg_path(ffmpeg)
@@ -81,7 +87,7 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                                                            "upstream_commit": UPSTREAM})
                 media = client.resolve_episode(video_id, quality)
                 partial, video = run_dir / "source.download.part", run_dir / "source.mp4"
-                transport = direct_download(media["url"], partial, "https://novel.snssdk.com/", timeout)
+                transport = direct_download(media["url"], partial, "https://novelquickapp.com/", timeout)
                 key = media.get("key")
                 if key:
                     # The source API supplied this playback key. Only local bytes
@@ -96,10 +102,11 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                 else:
                     partial.rename(video)
                 info = validate_video(video, ffmpeg, ffprobe, media.get("reported_duration_seconds"))
+                media["actual_quality"] = str(min(info["width"], info["height"])) + "p"
                 manifest = {**identity, "schema_version": 1, "status": "downloaded", "created_at": now(),
                             "title": f"{series['title']} 第{number}集", "source_url": series["source_url"],
                             "request_sha256": request_hash, "sha256": digest(video), "bytes": video.stat().st_size,
-                            "download_mode": "fruitknife_hongguo", "output_path": str(video), "metadata": info,
+                            "download_mode": "hongguo_downloader_1_0_4", "output_path": str(video), "metadata": info,
                             "requested_quality": quality, "actual_quality": media["actual_quality"],
                             "quality_fallback": media["actual_quality"] != quality,
                             "transport": transport, "upstream_commit": UPSTREAM}
@@ -169,7 +176,7 @@ def main():
     try:
         if args.timeout <= 0:
             raise DownloadError("Timeout must be positive")
-        client = FruitknifeClient(args.timeout)
+        client = HongguoClient(args.timeout)
         if args.command == "search":
             result = client.search(args.keyword, args.cursor)
         else:

@@ -51,7 +51,7 @@ try{
   await editor.ready;
   // Observe accepted agent edits. The saved-version pointer stays authoritative;
   // the component never refreshes over an active edit or an unsaved draft.
-  let revision=initial.revision,instructionRevision=null,checking=false;
+  let revision=initial.revision,checking=false;
   async function refresh(){
     if(document.hidden||checking)return;
     checking=true;
@@ -59,14 +59,6 @@ try{
       const response=await fetch('./api/health');
       if(!response.ok)return;
       const state=await response.json();
-      if(instructionRevision===null)instructionRevision=state.instruction_revision;
-      if(state.instruction_revision!==instructionRevision){
-        const folded=editor.collapseLongContent();
-        if(folded||(!editor.root.classList.contains('is-editing')&&
-            !editor.root.querySelector('[data-writing-action=edit]').disabled)){
-          instructionRevision=state.instruction_revision;
-        }
-      }
       if(state.document_revision!==revision){
         const adopted=await editor.refresh({revision:state.document_revision});
         if(adopted!==null)revision=adopted;

@@ -10,7 +10,7 @@
 npx skills add wu798998264-crypto/chushou-skill --skill chushou -g
 ```
 
-最新版小说搜索、下载、改编流程与写作编辑器通过仓库 `main` 提供。现有 Release 完整安装包仍为 v1.5.0，未包含新版编辑器；本次更新请从 `main` 获取，不重新打包旧版第三方模块，也不发布任何小说正文或用户项目素材。
+最新版 v1.7.0 使用 hongguo-downloader 1.0.4 下载短剧，取代水果刀；独立侧栏写作编辑器保持全文显示，不自动折叠。发布包包含当前技能源码及独立下载组件的 GPL-3.0 许可，不包含运行库、账号、用户项目或小说正文。神思应用内的写作编辑栏不变。
 
 下载 [最新版仓库压缩包](https://github.com/wu798998264-crypto/chushou-skill/archive/refs/heads/main.zip)，解压后把 **`chushou` 文件夹**放进你的 Skills 目录：
 
@@ -68,7 +68,7 @@ node chushou/scripts/tests/test-capture-novel.mjs
 
 ## 短剧文稿流程
 
-默认使用“水果刀下载 → Transcriber网站逐集识别 → 校对与标点 → 按集文稿”。已有视频或原稿从相应阶段继续，支持只处理选集；不顺带生成分镜、图片或视频。
+默认使用“红果下载器下载 → Transcriber网站逐集识别 → 校对与标点 → 按集文稿”。已有视频或原稿从相应阶段继续，支持只处理选集；不顺带生成分镜、图片或视频。
 
 - 网站运行在使用者自己的浏览器中，需要宿主能操作网页。首次下载模型、内存与广告访问提示可能影响运行；这不是随包无人值守网站驱动。
 - 原文不覆盖，校订记录具体位置、前后文字及核对依据；不确定内容保留原文并列待核。标点和排版逐字门禁保留数值、非BMP汉字及语义符号，不等同于ASR零漏句保证。
@@ -137,12 +137,12 @@ python chushou/scripts/canvas_bundle.py --plan plan.json --out-dir ./canvas-expo
 ## 依赖与验证
 
 - 脚本：Python 3.11+；小说提取使用 Node.js 18+。
-- 红果短剧：首次搜索、解析或下载会自动从公开PyPI安装独立依赖，包含FFmpeg和Pillow。只需宿主提供Python 3.11+、pip及联网能力；无需水果刀、旧技能目录、作者设备或fruitknife私有仓库访问权。
-- 可提前运行 `python chushou/scripts/fruitknife_runtime.py --install`；`--check`只检查、不安装。运行时保存在当前技能自己的`runtime/fruitknife/`，按Python、系统、CPU架构隔离，不修改系统Python。使用及选集规则见[红果短剧说明](chushou/references/fruitknife-download.md)。
+- 红果短剧：使用随包下载器源码，需要 Node.js 22+ 与 Python 3.11+。下载缺少媒体工具时从公开PyPI初始化独立依赖；搜索和目录解析无需安装Python签名库。
+- 可提前运行 `python -B chushou/scripts/chushou_runtime.py --install`；`--check`只检查、不安装。运行时保存在当前技能自己的`runtime/media/`，按Python、系统、CPU架构隔离，不修改系统Python。使用及选集规则见[红果短剧说明](chushou/references/hongguo-download.md)。
 - 普通播放页下载还需官方 `yt-dlp`；视频工具可继续使用自己的`--ffmpeg`路径，`ffprobe`可选。
 - 包内不包含 Python、机器相关运行时、账号、密钥、Cookie、成片或私人项目数据。解压到Skills目录后由当前设备首次初始化；不要复制其他设备的runtime。
 - 本地检查：`python -m unittest discover -s chushou/scripts -p "test_*.py"`。
 
-下载兼容性检查：`python chushou/scripts/test_fruitknife_download.py`，只访问本机合成视频服务。随仓库提供Windows、macOS、Linux的CI任务，初始化并运行这组检查；CI配置存在不代表已经在所有平台实测通过。
+下载兼容性检查：`python -B chushou/scripts/test_hongguo_download.py`；只使用隔离合成数据。CI初始化并运行检查，CI配置存在不代表每个平台都已经实测通过。
 
-主要技能代码为MIT License。`scripts/fruitknife_vendor/`保留来源仓库的原始权利说明与校验清单，不自动改授为MIT；详见其中的`UPSTREAM.json`。
+主要技能代码为MIT License；独立的 `scripts/hongguo_vendor/` 下载组件及其改动使用 GPL-3.0-only，全部对应源码和许可随包提供，详见其中的 `UPSTREAM.json` 与 `LICENSE`。不将该组件改授为MIT。

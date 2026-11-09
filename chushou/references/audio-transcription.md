@@ -4,7 +4,7 @@
 
 在用户明确要求批量语音识别、整集台词提取或转写时使用。服务端复用神思托管白板的真实音视频节点，独立队列提取16kHz单声道完整音轨，串行提交到[Fun-ASR-Nano官方体验服务](https://funaudiollm-fun-asr-nano.hf.space/?__theme=system)。不调用Codex或其他文字模型，不自动润色原文。已有相同素材及模型的结果优先复用。
 
-需要“水果刀下载全集→逐集转写→按集数汇总一份文档”时，继续 [drama-transcription.md](drama-transcription.md)，保留真实集次与源文件、任务的映射，并用`scripts/compile_drama_transcripts.py`自动合并，不能按任务完成顺序或文件名字典序拼接。
+需要“红果下载器下载全集→逐集转写→按集数汇总一份文档”时，继续 [drama-transcription.md](drama-transcription.md)，保留真实集次与源文件、任务的映射，并用`scripts/compile_drama_transcripts.py`自动合并，不能按任务完成顺序或文件名字典序拼接。
 
 ## 使用入口
 

@@ -1,0 +1,21 @@
+{
+  "name": "hongguo-downloader",
+  "version": "1.0.4",
+  "homepage": "https://111330.com",
+  "license": "GPL-3.0-only",
+  "source": "User-supplied hongguo-downloader.zip; static resources/app.asar extraction; executable not run",
+  "archiveSha256": "8b13572aea4c7ded88fe6413a62100ffbd359bd1c2e9284589d1ba55dac4786f",
+  "changes": [
+    "Separate JSON subprocess adapter",
+    "Native fetch replaces axios; host allowlist and bounded transport",
+    "branch_one.bin stored as equivalent Base64 text",
+    "No Electron updater, GUI, browser accounts or vendor node_modules bundled"
+  ],
+  "originalSourceHashes": {
+    "hongguo.js": "2db5c61a7bb7b58e16dc71cc4c7a34790e70e28af3817c4972661fec2f897318",
+    "xgorgon.js": "9934b3dcd34523ba0df98553ee9a08da5ccc9e5930db0b9ab411bfa292c8c91b",
+    "sixgod/index.js": "08182304e96199f3458cc6c755d1619fb58c14c48f87659d3b7af4c8afb44dda",
+    "sixgod/extra.js": "b3527ad293a554914db0c7bfc45aadd0dde056587d7072d206dcd2935a03275d",
+    "sixgod/branch_one.bin": "239ddf955d14a008311b8c3adcf05713b858954068fff02ab19c2ba81e31d1d3"
+  }
+}
