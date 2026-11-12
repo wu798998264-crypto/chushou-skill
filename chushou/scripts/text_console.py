@@ -4,7 +4,9 @@
 ``serve`` opens the shared editor against this project store. ``current`` reads
 only the selected saved version, never an unsaved draft. Older inline widgets
 keep separate runtime state: their disk seed is not their latest text and must
-not be silently migrated. ``render-legacy`` is explicit compatibility only.
+not be silently migrated. ``render-inline`` renders a selected saved document
+into a separate conversation widget; it never writes widget edits to disk.
+``render-legacy`` is explicit compatibility only.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ HASH_RE = re.compile(r"[a-f0-9]{64}\Z")
 BEGIN = "CHUSHOU_TEXT_CONSOLE_REQUEST_BEGIN"
 END = "CHUSHOU_TEXT_CONSOLE_REQUEST_END"
 TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "text-console.html"
+INLINE_TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "text-console-inline.html"
 
 
 class ConsoleError(Exception):
@@ -253,11 +256,16 @@ def commit(root, old_manifest, new_manifest, doc, version, content=None):
         raise
 
 
-def publish(store, document_id, kind, title, source_file, label="", expected_revision=None):
+def publish_text(store, document_id, kind, title, content, label="", expected_revision=None):
     check_id(document_id, ID_RE, "文档 ID")
     if kind not in ("script", "prompt") or not isinstance(title, str) or not title.strip():
         raise ConsoleError("文档类型或标题无效")
-    content = Path(source_file).read_bytes().decode("utf-8")
+    if not isinstance(content, str):
+        raise ConsoleError("正文必须是字符串")
+    try:
+        content.encode("utf-8")
+    except UnicodeError as error:
+        raise ConsoleError("正文包含无效的 Unicode 字符") from error
     with locked_store(store, create=True) as root:
         old = load_manifest(root, allow_empty=True)
         manifest = copy.deepcopy(old)
@@ -280,6 +288,66 @@ def publish(store, document_id, kind, title, source_file, label="", expected_rev
         manifest["active_document_id"] = document_id
         commit(root, old, manifest, doc, version, content)
         return {"status": "saved", "action": "publish", **summary(root, doc, version)}
+
+
+def publish(store, document_id, kind, title, source_file, label="", expected_revision=None):
+    content = Path(source_file).read_bytes().decode("utf-8")
+    return publish_text(store, document_id, kind, title, content, label, expected_revision)
+
+
+def import_inline(store, document_id, backup_file, expected_revision):
+    """Explicitly append a complete exported inline text as a saved version."""
+    check_id(document_id, ID_RE, "文档 ID")
+    if not integer(expected_revision, 1):
+        raise ConsoleError("导入必须提供有效的预期文档修订")
+    def unique_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ConsoleError("备份包含重复字段")
+            result[key] = value
+        return result
+    try:
+        backup = json.loads(Path(backup_file).read_bytes().decode("utf-8-sig"), object_pairs_hook=unique_pairs)
+    except (UnicodeError, json.JSONDecodeError) as error:
+        raise ConsoleError("备份不是有效的 UTF-8 JSON") from error
+    fields = {"format", "schema", "store_root", "document_id", "kind", "version_id", "content"}
+    if (not isinstance(backup, dict) or set(backup) != fields or
+            backup.get("format") != "chushou-writing-text-backup" or
+            backup.get("schema") != 1 or isinstance(backup.get("schema"), bool) or
+            backup.get("document_id") != document_id or
+            backup.get("kind") not in ("script", "prompt") or
+            not isinstance(backup.get("store_root"), str) or
+            not isinstance(backup.get("content"), str)):
+        raise ConsoleError("备份格式或目标文档无效")
+    check_id(backup.get("version_id"), VERSION_RE, "备份版本 ID")
+    try:
+        backup["content"].encode("utf-8")
+    except UnicodeError as error:
+        raise ConsoleError("备份正文包含无效的 Unicode 字符") from error
+    trusted_root = Path(store).expanduser().resolve()
+    try:
+        backup_root = Path(backup["store_root"]).expanduser()
+        same_root = backup_root.is_absolute() and backup_root.resolve() == trusted_root
+    except (ValueError, OSError) as error:
+        raise ConsoleError("备份的存储目录无效") from error
+    if not same_root:
+        raise ConsoleError("备份的存储目录与目标目录不一致")
+    with locked_store(trusted_root) as root:
+        manifest = load_manifest(root)
+        doc = get_document(manifest, document_id)
+        if doc["kind"] != backup["kind"]:
+            raise ConsoleError("备份文档类型与目标文档不一致")
+        if doc["revision"] != expected_revision:
+            raise ConsoleError(f"版本冲突：预计文档修订 {expected_revision}，当前为 {doc['revision']}。请重读并核对。")
+        kind, title = doc["kind"], doc["title"]
+    # publish_text acquires the store lock again and rechecks the same revision.
+    # Any mutation between inspection and commit therefore produces a conflict.
+    result = publish_text(trusted_root, document_id, kind, title, backup["content"],
+                          "对话备份导入", expected_revision)
+    result["action"] = "import-inline"
+    result["source_version_id"] = backup["version_id"]
+    return result
 
 
 def read_request(request_file):
@@ -416,7 +484,7 @@ def list_documents(store):
                               for doc in manifest["documents"].values()]}
 
 
-def render(store, output, document_id=None, draft_request=None):
+def render(store, output, document_id=None, draft_request=None, *, template_path=TEMPLATE):
     """Package the initial UI seed; subsequent inline saves stay in widget state."""
     draft = read_request(draft_request) if draft_request else None
     with locked_store(store) as root:
@@ -447,7 +515,7 @@ def render(store, output, document_id=None, draft_request=None):
             for version in doc["versions"]:
                 seed_doc["versions"].append({**version, "content": read_version(root, doc, version)})
             data["documents"].append(seed_doc)
-        template = TEMPLATE.read_bytes().decode("utf-8")
+        template = template_path.read_bytes().decode("utf-8")
         placeholder = "__CONSOLE_DATA_JSON__"
         if template.count(placeholder) != 1:
             raise ConsoleError("操作台模板缺少唯一的数据占位符")
@@ -469,14 +537,27 @@ def render(store, output, document_id=None, draft_request=None):
                 "document_id": selected["id"], "document_revision": selected["revision"]}
 
 
+def render_inline(store, output, document_id):
+    """Seed a separate inline editor from a saved document, never live drafts.
+
+    There is no write-back path: the user must explicitly export the complete
+    displayed text and publish it with a freshly checked document revision.
+    """
+    if not document_id:
+        raise ConsoleError("对话内编辑器必须明确指定文档 ID")
+    result = render(store, output, document_id=document_id, template_path=INLINE_TEMPLATE)
+    result["mode"] = "inline_saved_seed"
+    return result
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("publish", "list", "current", "drafts", "serve", "render-legacy", "apply"):
+    for name in ("publish", "list", "current", "drafts", "serve", "render-legacy", "render-inline", "import-inline", "apply"):
         command = commands.add_parser(name)
         command.add_argument("--store", required=True, help="Trusted, registered project text store")
-        if name in ("publish", "current", "drafts", "serve", "render-legacy"):
-            command.add_argument("--document", required=name == "publish")
+        if name in ("publish", "current", "drafts", "serve", "render-legacy", "render-inline", "import-inline"):
+            command.add_argument("--document", required=name in ("publish", "render-inline", "import-inline"))
         if name == "publish":
             command.add_argument("--kind", required=True, choices=("script", "prompt"))
             command.add_argument("--title", required=True)
@@ -492,6 +573,11 @@ def build_parser():
         elif name == "render-legacy":
             command.add_argument("--output", required=True)
             command.add_argument("--draft-request", help="Rejected save JSON/envelope; restore as unsaved draft only")
+        elif name == "render-inline":
+            command.add_argument("--output", required=True)
+        elif name == "import-inline":
+            command.add_argument("--backup", required=True)
+            command.add_argument("--expected-revision", type=int, required=True)
         elif name == "apply":
             command.add_argument("--request-file", required=True)
     return parser
@@ -518,6 +604,10 @@ def main():
             result = list_drafts(args.store, args.document)
         elif args.command == "render-legacy":
             result = render(args.store, args.output, args.document, args.draft_request)
+        elif args.command == "render-inline":
+            result = render_inline(args.store, args.output, args.document)
+        elif args.command == "import-inline":
+            result = import_inline(args.store, args.document, args.backup, args.expected_revision)
         else:
             result = apply_request(args.store, args.request_file)
     except (ConsoleError, OSError, UnicodeError) as error:

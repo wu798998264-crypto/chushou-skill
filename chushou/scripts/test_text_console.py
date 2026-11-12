@@ -181,6 +181,78 @@ class TextConsoleTests(unittest.TestCase):
         self.assertEqual([doc["id"] for doc in seed["documents"]], ["episode-01-script"])
         self.assertEqual(self.manifest()["active_document_id"], "episode-01-prompts")
 
+    def test_inline_renders_only_selected_disk_document_without_mutating_store(self):
+        self.source.write_bytes("已保存的新正文\n".encode("utf-8"))
+        console.publish(self.store, "episode-01-script", "script", "三界最强音", self.source,
+                        "第二版", expected_revision=1)
+        self.source.write_bytes("其他文档".encode("utf-8"))
+        console.publish(self.store, "episode-01-prompts", "prompt", "提示词", self.source)
+        before = self.manifest()
+        versions_before = sorted((p.relative_to(self.store), p.read_bytes()) for p in (self.store / "versions").rglob("*.txt"))
+        output = self.root / "inline.html"
+        result = console.render_inline(self.store, output, "episode-01-script")
+        html = output.read_bytes().decode("utf-8")
+        payload = re.search(r'<script type="application/json" data-console-data>(.*?)</script>', html, re.S).group(1)
+        seed = json.loads(payload)
+        self.assertEqual(result["mode"], "inline_saved_seed")
+        self.assertEqual(result["document_revision"], 2)
+        self.assertEqual([d["id"] for d in seed["documents"]], ["episode-01-script"])
+        self.assertEqual(seed["documents"][0]["current_version_id"], "v2")
+        self.assertEqual([v["content"] for v in seed["documents"][0]["versions"]], [self.original, "已保存的新正文\n"])
+        self.assertEqual(self.manifest(), before)
+        self.assertEqual(sorted((p.relative_to(self.store), p.read_bytes()) for p in (self.store / "versions").rglob("*.txt")), versions_before)
+        self.assertEqual(console.current(self.store, "episode-01-script")["content"], "已保存的新正文\n")
+
+    def test_inline_rejects_store_output_and_missing_document(self):
+        with self.assertRaisesRegex(console.ConsoleError, "文档 ID"):
+            console.render_inline(self.store, self.root / "inline.html", None)
+        with self.assertRaisesRegex(console.ConsoleError, "权威文本版本存储"):
+            console.render_inline(self.store, self.store / "manifest.json", "episode-01-script")
+        self.assertEqual(console.current(self.store)["content"], self.original)
+
+    def inline_backup(self, **overrides):
+        backup = {"format": "chushou-writing-text-backup", "schema": 1,
+                  "store_root": str(self.store.resolve()), "document_id": "episode-01-script",
+                  "kind": "script", "version_id": "v9", "content": "编辑正文\r\n完整中文\n"}
+        backup.update(overrides)
+        file = self.root / "inline-backup.json"
+        file.write_text(json.dumps(backup, ensure_ascii=True), encoding="utf-8")
+        return file
+
+    def test_explicit_inline_import_appends_complete_text_and_preserves_version(self):
+        result = console.import_inline(self.store, "episode-01-script", self.inline_backup(), 1)
+        self.assertEqual(result["action"], "import-inline")
+        self.assertEqual(result["source_version_id"], "v9")
+        self.assertEqual(result["version_id"], "v2")
+        self.assertEqual(console.current(self.store)["content"], "编辑正文\r\n完整中文\n")
+        self.assertEqual((self.store / "versions/episode-01-script/v1.txt").read_bytes().decode("utf-8"), self.original)
+
+    def test_inline_import_rejects_invalid_identity_and_stale_revision(self):
+        for overrides in ({"store_root": str(self.root)}, {"store_root": "\0"}, {"document_id": "other"},
+                          {"kind": "prompt"}, {"version_id": "../v1"},
+                          {"schema": True}, {"content": "\ud800"}, {"extra": "unexpected"}):
+            with self.subTest(overrides=overrides), self.assertRaises(console.ConsoleError):
+                console.import_inline(self.store, "episode-01-script", self.inline_backup(**overrides), 1)
+        backup = self.inline_backup()
+        with self.assertRaisesRegex(console.ConsoleError, "版本冲突"):
+            console.import_inline(self.store, "episode-01-script", backup, 2)
+        with self.assertRaisesRegex(console.ConsoleError, "预期文档修订"):
+            console.import_inline(self.store, "episode-01-script", backup, None)
+        self.assertEqual(console.current(self.store)["content"], self.original)
+        self.assertEqual(len(self.manifest()["documents"]["episode-01-script"]["versions"]), 1)
+
+    def test_inline_import_rechecks_revision_after_inspection(self):
+        backup = self.inline_backup()
+        real_publish = console.publish_text
+        def concurrent_publish(*args, **kwargs):
+            real_publish(self.store, "episode-01-script", "script", "三界最强音", "并发更新", expected_revision=1)
+            return real_publish(*args, **kwargs)
+        with patch.object(console, "publish_text", side_effect=concurrent_publish):
+            with self.assertRaisesRegex(console.ConsoleError, "版本冲突"):
+                console.import_inline(self.store, "episode-01-script", backup, 1)
+        self.assertEqual(console.current(self.store)["content"], "并发更新")
+        self.assertEqual(len(self.manifest()["documents"]["episode-01-script"]["versions"]), 2)
+
     def test_manifest_write_failure_rolls_back_text_and_keeps_old_pointer(self):
         before = self.manifest()
         with patch.object(console, "write_manifest", side_effect=OSError("simulated disk write failure")):
