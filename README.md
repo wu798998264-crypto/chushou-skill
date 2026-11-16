@@ -4,7 +4,7 @@
 
 ## 安装
 
-Windows x64 建议下载 [完整发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后将其中的 `chushou` 文件夹放进 `%USERPROFILE%\.codex\skills\`。完整包含云析 Java 核心、隔离 Electron 浏览器和 FFmpeg；需要 Python 3.11+。已有同名技能请先备份，再合并安装。公开短视频可使用云析解析，遇验证码、登录或失效链接按实际情况处理。
+Windows x64 建议下载 [Windows 发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后将其中的 `chushou` 文件夹放进 `%USERPROFILE%\.codex\skills\`。包内包含云析 Java 核心和隔离 Electron 浏览器；需要 Python 3.11+，并单独安装 FFmpeg 和 FFprobe。已有同名技能请先备份，再合并安装。公开短视频可使用云析解析，遇验证码、登录或失效链接按实际情况处理。
 
 也可以获取仓库源码：
 
@@ -134,11 +134,11 @@ python chushou/scripts/canvas_bundle.py --plan plan.json --out-dir ./canvas-expo
 - 红果短剧：使用随包下载器源码，需要 Node.js 22+ 与 Python 3.11+。下载缺少媒体工具时从公开PyPI初始化独立依赖；搜索和目录解析无需安装Python签名库。
 - 可提前运行 `python -B chushou/scripts/chushou_runtime.py --install`；`--check`只检查、不安装。运行时保存在当前技能自己的`runtime/media/`，按Python、系统、CPU架构隔离，不修改系统Python。使用及选集规则见[红果短剧说明](chushou/references/hongguo-download.md)。
 - Windows x64 完整包优先使用云析；其他平台或云析不可用时可使用官方 `yt-dlp`，视频工具也可使用自己的 `--ffmpeg` 路径。
-- 完整发布包含 Windows 云析 Java、Electron 和 FFmpeg 运行库，不包含 Python、账号、密钥、Cookie、成片或私人项目数据；源码仓库不含这些二进制运行库。红果独立运行时仍按需初始化。
+- Windows 发布包含云析 Java 与 Electron 运行库；FFmpeg、FFprobe 和 Python 需单独安装。包内不含账号、密钥、Cookie、成片或私人项目数据；源码仓库不含这些二进制运行库。红果独立运行时仍按需初始化。
 - 本地检查：`python -m unittest discover -s chushou/scripts -p "test_*.py"`。
 
 下载兼容性检查：`python -B chushou/scripts/test_hongguo_download.py`；只使用隔离合成数据。CI初始化并运行检查，CI配置存在不代表每个平台都已经实测通过。
 
 主要技能代码为MIT License；独立的 `scripts/hongguo_vendor/` 下载组件及其改动使用 GPL-3.0-only，全部对应源码和许可随包提供，详见其中的 `UPSTREAM.json` 与 `LICENSE`。不将该组件改授为MIT。
 
-云析使用 YunX-Desktop 1.3.4，按 AGPL-3.0 发布；对应源码、许可证和 Java 许可位于 `chushou/yunx-port/resources/yunx/`。Electron、FFmpeg 和其他依赖各自许可与声明随完整包提供，不能统一改授为 MIT。
+云析使用 YunX-Desktop 1.3.4，按 AGPL-3.0 发布；对应源码、许可证和 Java 许可位于 `chushou/yunx-port/resources/yunx/`。Electron 和其他随包依赖各自许可与声明随发布包提供，不能统一改授为 MIT。

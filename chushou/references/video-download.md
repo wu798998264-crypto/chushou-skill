@@ -6,19 +6,19 @@
 
 ## 云析短视频入口（Windows x64）
 
-Windows x64 的普通短视频优先调用随包云析；红果继续使用其专用入口。 若从源码仓库安装而缺少云析运行库，请先获取 [Windows 完整发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest) 并合并其中的 `chushou/yunx-port`；不要将源码包当作含二进制的完整包。需要 Python 3.11+、可用网络和可运行 Electron 的桌面环境。云析调用神思同源解析、隔离浏览器、传输和完整解码链，不使用用户已有浏览器资料。环境阻止浏览器启动时记录错误并使用可用环境，不能把失败视为成功。Linux/macOS 使用下方现有入口。
+Windows x64 的普通短视频优先调用随包云析；红果继续使用其专用入口。若从源码仓库安装而缺少云析运行库，请先获取 [Windows 发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest) 并合并其中的 `chushou/yunx-port`。需要 Python 3.11+、单独安装的 FFmpeg 和 FFprobe、可用网络与可运行 Electron 的桌面环境。两项工具放在 PATH，或通过 `--ffmpeg` 和 `--ffprobe` 指定其路径；发布包不包含这两个工具。云析调用神思同源解析、隔离浏览器、传输和完整解码链，不使用用户已有浏览器资料。环境阻止浏览器启动时记录错误并使用可用环境，不能把失败视为成功。Linux/macOS 使用下方现有入口。
 
 ```text
 python <技能目录>/yunx-port/launch.py --source-file "项目/source-link.txt" --out-dir "项目/downloads" --inspector <技能目录>/scripts/inspect_video.py
 ```
 
-仅下载时使用 `--download-only` 并省略 `--inspector`。结果若为 `selection_required`，核对各候选后使用返回的 `--option-id`、`--option-label` 和 `--selection-key` 重新执行；候选或来源信息变化时重新核对，不能按序号盲选。成功以 `video`、`manifest` 和检查结果为准。入口验证云析及 FFmpeg 运行库、检查媒体哈希并全片解码，失败保留错误，不将结果冒称成功。登录、验证码、私有资源及其他权限限制按实际情况处理，不绕过访问控制。云析及其源码、许可位于 `yunx-port/resources/yunx`。
+仅下载时使用 `--download-only` 并省略 `--inspector`。结果若为 `selection_required`，核对各候选后使用返回的 `--option-id`、`--option-label` 和 `--selection-key` 重新执行；候选或来源信息变化时重新核对，不能按序号盲选。成功以 `video`、`manifest` 和检查结果为准。入口验证云析运行库、检查媒体哈希并使用本机 FFmpeg 全片解码，失败保留错误，不将结果冒称成功。登录、验证码、私有资源及其他权限限制按实际情况处理，不绕过访问控制。云析及其源码、许可位于 `yunx-port/resources/yunx`。
 
 云析失败时可按下述 yt-dlp 或人工解析站路径尝试；抖音和 ACFUN 各有一次真实样本验证，其他平台与媒体类型是否成功以实际结果为准。
 
 ## 本地入口
 
-使用现有Python运行时调用 `scripts/download_video.py`。公开包不附带运行时或二进制。先定位当前宿主Python；视频检查需PATH或显式路径中的FFmpeg，播放页下载还需官方yt-dlp。已有依赖直接复用，缺失时说明所需安装项，不假定作者机器目录。
+使用现有Python运行时调用 `scripts/download_video.py`。此入口需要宿主Python；视频检查需PATH或显式路径中的FFmpeg，播放页下载还需官方yt-dlp。已有依赖直接复用，缺失时说明所需安装项，不假定作者机器目录。
 
 将原始分享内容以UTF-8保存为项目内 `source-link.txt`，通过文件参数传入，避免把用户文案中的引号、美元符号或反引号拼成shell代码。
 

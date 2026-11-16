@@ -15,7 +15,8 @@ app.whenReady().then(async()=>{
  let parser,exitCode=0;
  try{
   const source=await readFile(sourceFileArg,'utf8');
-  const ffmpeg=join(root,'resources/ffmpeg/ffmpeg.exe'),ffprobe=join(root,'resources/ffmpeg/ffprobe.exe');
+  const ffmpeg=process.env.SHENSI_FFMPEG_PATH,ffprobe=process.env.SHENSI_FFPROBE_PATH;
+  if(!ffmpeg||!ffprobe)throw Error('请通过 launch.py 指定已安装的 FFmpeg 和 FFprobe');
   const {createYunxVideoParser}=await import(pathToFileURL(join(root,'apps/desktop/yunx-video-parser.mjs')));
   parser=createYunxVideoParser({BrowserWindow,ffmpeg,ffprobe});
   const jobId='video-'+randomUUID();

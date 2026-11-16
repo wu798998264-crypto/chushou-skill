@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -28,14 +29,11 @@ def verify_yunx(root):
         if not (root / name).is_file(): raise ValueError('Missing YunX license or corresponding source')
 
 
-def verify_ffmpeg(root):
-    manifest=json.loads((root/'runtime-manifest.json').read_text(encoding='utf-8'))
-    entries={entry['name']:entry for entry in manifest['files']}
-    for name in ('ffmpeg.exe','ffprobe.exe','NOTICE.txt'):
-        entry=entries[name]; path=root/name
-        with path.open('rb') as stream: digest=hashlib.file_digest(stream,'sha256').hexdigest()
-        if path.stat().st_size!=entry['bytes'] or digest!=entry['sha256']:
-            raise ValueError('Media runtime integrity failed: '+name)
+def media_tool(value, name):
+    found = shutil.which(value or name)
+    if not found:
+        raise ValueError(name + ' not found; install it separately or supply --' + name)
+    return str(Path(found).resolve(strict=True))
 
 
 def main():
@@ -48,6 +46,8 @@ def main():
     parser.add_argument('--option-label', help='Matching label returned with --option-id')
     parser.add_argument('--selection-key', help='Fingerprint returned with the same option list')
     parser.add_argument('--interval', type=float, default=1.0)
+    parser.add_argument('--ffmpeg', help='Path to separately installed ffmpeg executable')
+    parser.add_argument('--ffprobe', help='Path to separately installed ffprobe executable')
     args = parser.parse_args()
     try:
         if args.interval <= 0: raise ValueError('Interval must be positive')
@@ -56,10 +56,13 @@ def main():
         source = Path(args.source_file).resolve(strict=True)
         out = Path(args.out_dir).resolve(); out.mkdir(parents=True, exist_ok=True)
         verify_yunx(ROOT / 'resources/yunx')
-        verify_ffmpeg(ROOT / 'resources/ffmpeg')
+        ffmpeg = media_tool(args.ffmpeg, 'ffmpeg')
+        ffprobe = media_tool(args.ffprobe, 'ffprobe')
         command = [str(ROOT/'electron/electron.exe'), str(ROOT/'download.cjs'), str(source), str(out)]
         if args.option_id: command += [args.option_id, args.option_label, args.selection_key]
         env = os.environ.copy(); env.pop('ELECTRON_RUN_AS_NODE', None)
+        env['SHENSI_FFMPEG_PATH'] = ffmpeg
+        env['SHENSI_FFPROBE_PATH'] = ffprobe
         run = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=900, env=env)
         for line in run.stderr.splitlines(): print(line, file=sys.stderr)
         lines = [line for line in run.stdout.splitlines() if line.startswith('{')]
@@ -79,8 +82,7 @@ def main():
         if not args.download_only:
             inspection = subprocess.run([sys.executable,'-X','utf8',str(Path(args.inspector).resolve(strict=True)),
                 '--video',str(video),'--out-dir',str(video.parent/'analysis'),
-                '--ffmpeg',str(ROOT/'resources/ffmpeg/ffmpeg.exe'),
-                '--ffprobe',str(ROOT/'resources/ffmpeg/ffprobe.exe'), '--interval',str(args.interval)],
+                '--ffmpeg',ffmpeg, '--ffprobe',ffprobe, '--interval',str(args.interval)],
                 capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=900)
             if inspection.returncode:
                 raise ValueError('Video downloaded but inspection failed: '+inspection.stderr[-800:])
