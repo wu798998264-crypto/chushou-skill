@@ -1,4 +1,4 @@
-"""Adapter for supplied hongguo-downloader 1.0.4; no fruitknife fallback."""
+"""Fruitknife 2.0.0 core adapter; no fallback to the obsolete downloader."""
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import urllib.parse
 from download_video import DownloadError, extract_url, host_matches, safe_error
 
 ROOT = Path(__file__).resolve().parent
-UPSTREAM = "hongguo-downloader-1.0.4-user-archive-20261109"
+UPSTREAM = "fruitknife-2.0.0-e8e350787aa2ac63cdab9febaa85837010a5052a"
 QUALITIES = ("360p", "480p", "540p", "720p", "1080p")
 HOSTS = ("novelquickapp.com", "hongguoduanju.com", "fanqienovel.com", "fqnovel.com")
 
@@ -46,6 +46,11 @@ def parse_episodes(value, total, all_episodes=False):
 
 
 class HongguoClient:
+    download_mode = "fruitknife_2_0_0"
+
+    def prepare_episode(self, source, destination, key):
+        return self._call("prepare", source=str(source), destination=str(destination), key=key.hex())
+
     def __init__(self, timeout=30):
         self.timeout = timeout
         self.episodes = {}

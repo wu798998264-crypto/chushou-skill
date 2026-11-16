@@ -10,6 +10,9 @@ console.warn=(...v)=>process.stderr.write(v.join(' ')+'\n');
   if(!v.url||/bytevc2|bvc2/i.test(v.codec||''))throw Error('未取得标准播放器可解码的播放流');
   const key=v.spadeA?api.deriveKey(v.spadeA):null;if(v.spadeA&&(!key||key.length!==16))throw Error('播放密钥未通过校验');
   result={url:v.url,key:key?.toString('hex')||null,codec:v.codec,content_type:v.content_type};
+ }else if(p.action==='prepare'){
+  if(!/^[a-f0-9]{32}$/.test(p.key)||!require('node:path').isAbsolute(p.source)||!require('node:path').isAbsolute(p.destination)||fs.existsSync(p.destination))throw Error('播放准备参数无效或目标已存在');
+  api.decryptMp4File(p.source,p.destination,Buffer.from(p.key,'hex'));result={prepared:true};
  }else throw Error('不支持的下载动作');
  process.stdout.write(JSON.stringify(result));
 })().catch(error=>{process.stderr.write(String(error.message||error).replace(/https?:\/\/\S+/g,'[URL]').slice(-1800)+'\n');process.exitCode=2;});

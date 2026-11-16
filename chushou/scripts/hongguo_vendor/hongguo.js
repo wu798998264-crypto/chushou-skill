@@ -72,6 +72,7 @@ async function signedPost(path, body, opts) {
     responseType: 'text',
   });
   if (opts && opts.returnRaw) return typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+  if(typeof res.data==='string'&&!res.data.trim())throw new Error('红果取流接口返回空响应（HTTP '+res.status+'）；未取得播放地址，不能宣称下载成功');
   return typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
 }
 
@@ -556,30 +557,98 @@ async function searchSeries(keyword, opts = {}) {
     return cached.v;
   }
 
-  const j = await signedGet(SEARCH_PATH, { query: q, offset: String(offset) });
-  if (!j || (j.code !== undefined && j.code !== 0)) {
-    throw new Error('搜索接口异常: ' + JSON.stringify(j || {}).slice(0, 160));
-  }
-
-  const tabs = Array.isArray(j.search_tabs) ? j.search_tabs : [];
-  const mainTab = tabs.find((t) => t.tab_type === 11) || tabs[0] || {};
-  const cells = Array.isArray(mainTab.data) ? mainTab.data : [];
+  // 2026-11-09: bookapi/search/tab 全端点被服务端风控（HTTP 200 空响应体），
+  // 但 suggest/v1 一直可用，且 query_result_v2 直接携带
+  //   keyword = series_id、name = 剧名、pic_url = 封面、
+  //   sug_abstract = "题材·...·4517万热度"、video_data = 视频元数据
+  // 因此搜索改由 suggest 接口实现（结果不受影响，还能带出热度与封面）。
+  const j = await signedGet(SUGGEST_PATH, { query: q });
+  const v2 =
+    (j && j.data && Array.isArray(j.data.query_result_v2))
+      ? j.data.query_result_v2
+      : [];
 
   const items = [];
   const seen = new Set();
-  for (const cell of cells) {
-    const item = normalizeSearchCell(cell);
-    if (!item || seen.has(item.series_id)) continue;
-    seen.add(item.series_id);
-    items.push(item);
+  for (const it of v2) {
+    const seriesId = String((it && it.keyword) || '');
+    if (!/^\d{15,25}$/.test(seriesId) || seen.has(seriesId)) continue;
+    seen.add(seriesId);
+
+    const title = String(it.name || '').trim() || '未命名短剧';
+
+    // sug_abstract 形如 "灾难·末世灾难·4517万热度"
+    let playCount = 0;
+    const hm = /([\d.]+)\s*(万|亿)?\s*热度/.exec(String(it.sug_abstract || ''));
+    if (hm) {
+      playCount = Math.round(parseFloat(hm[1]) * (hm[2] === '亿' ? 1e8 : hm[2] === '万' ? 1e4 : 1));
+    }
+
+    // 题材标签：sug_abstract 的前几节（去掉最后的热度节）
+    const tags = String(it.sug_abstract || '')
+      .split('·')
+      .map((t) => t.trim())
+      .filter((t) => t && !/热度$/.test(t) && !/^\d/.test(t))
+      .slice(0, 5);
+
+    const vd = it.video_data || null;
+
+    items.push({
+      series_id: seriesId,
+      title,
+      // 封面：video_data.cover 是真实剧封面（HEIC，主进程代理会转 JPEG）；
+      // it.pic_url 多为防盗链占位 PNG（1KB），不能要
+      cover: String((vd && vd.cover) || it.pic_url || ''),
+      total: 0, // suggest 不给集数；点选后由 multi_video_detail 补全
+      play_count: playCount,
+      followed_count: 0,
+      score: '',
+      intro: String((vd && vd.video_desc) || '').trim(),
+      actors: '',
+      categories: tags,
+      tags,
+      // 渲染层可能直接读这些字段
+      series_title: title,
+      series_cover: String((vd && vd.cover) || it.pic_url || ''),
+      episode_cnt: 0,
+      series_play_cnt: playCount,
+    });
   }
 
+  // ── 补全封面/集数：suggest 没带 video_data 的条目（约 6/8）用 detail 接口补 ──
+  // pic_url 是防盗链占位 PNG（1.2KB），必须换成 multi_video_detail 返回的
+  // series_cover（带签名的真图）；顺带把 total（集数）与简介补齐。
+  const needFix = items.filter(
+    (it) => /p6-novel\.byteimg\.com/.test(it.cover) || !it.total
+  );
+  if (needFix.length) {
+    let idx = 0;
+    const worker = async () => {
+      while (idx < needFix.length) {
+        const it = needFix[idx++];
+        try {
+          const d = await fetchEpisodeList(it.series_id);
+          if (d.cover) { it.cover = d.cover; it.series_cover = d.cover; }
+          if (d.total) it.total = d.total;
+          if (!it.intro && d.intro) it.intro = d.intro;
+          if (d.play_count && !it.play_count) it.play_count = d.play_count;
+        } catch (_) {
+          // 单条失败不影响其余结果
+        }
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(3, needFix.length) }, () => worker())
+    );
+  }
+
+  // 支持翻页：suggest 没有真翻页，offset>0 时返回空（前端据此停止加载更多）
   const result = {
     keyword: q,
-    items,
-    rawCount: cells.length,
-    nextOffset: offset + cells.length,
-    hasMore: cells.length > 0 && items.length > 0,
+    items: offset > 0 ? [] : items,
+    rawCount: items.length,
+    nextOffset: offset + items.length,
+    hasMore: false,
   };
 
   searchCache.set(cacheKey, { t: Date.now(), v: result });
@@ -718,6 +787,7 @@ async function fetchPlayUrlSingle(vid, contentType, codecPreference) {
   // device_level 4 优先；万一该等级没有可用地址再退回 3
   const levels = [4, 3];
   let fallback = null;
+  let lastFailure = '';
   for (const ct of order) {
     for (const dl of levels) {
       try {
@@ -725,7 +795,7 @@ async function fetchPlayUrlSingle(vid, contentType, codecPreference) {
           biz_param: modelBizParam(dl),
           mixed_video_id_map: { [ct]: [vid] },
         });
-        if (!j || j.code !== 0) continue;
+        if (!j || j.code !== 0) {lastFailure='接口返回代码 '+String(j?.code??'missing');continue;}
         const item = (j.data || {})[vid] || {};
         const [playUrl, spadeA, codec] = parseModelVideo(item.video_model, codecPreference);
         if (!playUrl) continue;
@@ -737,6 +807,10 @@ async function fetchPlayUrlSingle(vid, contentType, codecPreference) {
         // 不是 HEVC（例如个别剧集只给 bytevc2）时先记下，继续找 HEVC 流
         if (!fallback) fallback = res;
       } catch (e) {
+        lastFailure=String(e.message||e).replace(/https?:\/\/\S+/g,'[URL]').slice(0,300);
+        // An empty response is independent of content type. Stop instead of
+        // issuing eight more identical blocked requests for this episode.
+        if(lastFailure.includes('返回空响应'))throw e;
         // 换下一种类型继续试
       }
     }
@@ -747,7 +821,7 @@ async function fetchPlayUrlSingle(vid, contentType, codecPreference) {
     return fallback;
   }
   console.error("[Hongguo] 取流失败: 所有 content_type 均无有效地址", vid);
-  return { url: null, spadeA: null, codec: null, content_type: null };
+  throw new Error('未取得可用播放流：'+(lastFailure||'源站未提供标准播放器支持的格式'));
 }
 
 /**

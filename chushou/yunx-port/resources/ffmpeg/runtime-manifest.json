@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-21T09:18:56.171Z",
+  "readOnlySource": true,
+  "files": [
+    {
+      "name": "ffmpeg.exe",
+      "bytes": 64458752,
+      "sha256": "c8abc49e7be62dde8e12972af373959e0076a7b8dc8040eb45978e0608f8781e"
+    },
+    {
+      "name": "ffprobe.exe",
+      "bytes": 80995328,
+      "sha256": "f28c4751e7367205267025aaf0fcfc921e34d9b7edaa46bd9c8abaf367fc9051"
+    },
+    {
+      "name": "NOTICE.txt",
+      "bytes": 777,
+      "sha256": "efa6266cdd4fc569fb1e516566176ca5695ffc975fbc0fdfdf0b996cf6991ccc"
+    }
+  ]
+}

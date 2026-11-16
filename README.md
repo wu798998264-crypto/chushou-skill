@@ -4,20 +4,15 @@
 
 ## 安装
 
-使用支持 skills 的 Node.js 环境安装／更新：
+Windows x64 建议下载 [完整发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后将其中的 `chushou` 文件夹放进 `%USERPROFILE%\.codex\skills\`。完整包含云析 Java 核心、隔离 Electron 浏览器和 FFmpeg；需要 Python 3.11+。已有同名技能请先备份，再合并安装。公开短视频可使用云析解析，遇验证码、登录或失效链接按实际情况处理。
+
+也可以获取仓库源码：
 
 ```text
 npx skills add wu798998264-crypto/chushou-skill --skill chushou -g
 ```
 
-最新版 v1.7.0 使用 hongguo-downloader 1.0.4 下载短剧，取代水果刀；独立侧栏写作编辑器保持全文显示，不自动折叠。发布包包含当前技能源码及独立下载组件的 GPL-3.0 许可，不包含运行库、账号、用户项目或小说正文。神思应用内的写作编辑栏不变。
-
-下载 [最新版仓库压缩包](https://github.com/wu798998264-crypto/chushou-skill/archive/refs/heads/main.zip)，解压后把 **`chushou` 文件夹**放进你的 Skills 目录：
-
-- Codex：`~/.codex/skills/chushou/`；Windows 通常为 `%USERPROFILE%\.codex\skills\chushou\`。
-- 其他支持 `SKILL.md` 的 Agent：放进该宿主的 Skills 目录，按宿主方式重新加载。
-
-也可以克隆本仓库，仅复制 `chushou/`。不需要复制发布包、Git 元数据或其他用户的项目。
+Git 仓库与其源码 ZIP 不含云析 Windows 二进制运行库。使用源码安装后，如需云析，请从完整发布包中将 `chushou/yunx-port` 目录合并到安装好的同名技能目录。Linux 和 macOS 使用现有 yt-dlp 或直接媒体下载路径；云析打包运行组件目前仅提供 Windows x64。网络与各站点可用性以实际结果为准。
 
 ## 使用示例
 
@@ -139,10 +134,12 @@ python chushou/scripts/canvas_bundle.py --plan plan.json --out-dir ./canvas-expo
 - 脚本：Python 3.11+；小说提取使用 Node.js 18+。
 - 红果短剧：使用随包下载器源码，需要 Node.js 22+ 与 Python 3.11+。下载缺少媒体工具时从公开PyPI初始化独立依赖；搜索和目录解析无需安装Python签名库。
 - 可提前运行 `python -B chushou/scripts/chushou_runtime.py --install`；`--check`只检查、不安装。运行时保存在当前技能自己的`runtime/media/`，按Python、系统、CPU架构隔离，不修改系统Python。使用及选集规则见[红果短剧说明](chushou/references/hongguo-download.md)。
-- 普通播放页下载还需官方 `yt-dlp`；视频工具可继续使用自己的`--ffmpeg`路径，`ffprobe`可选。
-- 包内不包含 Python、机器相关运行时、账号、密钥、Cookie、成片或私人项目数据。解压到Skills目录后由当前设备首次初始化；不要复制其他设备的runtime。
+- Windows x64 完整包优先使用云析；其他平台或云析不可用时可使用官方 `yt-dlp`，视频工具也可使用自己的 `--ffmpeg` 路径。
+- 完整发布包含 Windows 云析 Java、Electron 和 FFmpeg 运行库，不包含 Python、账号、密钥、Cookie、成片或私人项目数据；源码仓库不含这些二进制运行库。红果独立运行时仍按需初始化。
 - 本地检查：`python -m unittest discover -s chushou/scripts -p "test_*.py"`。
 
 下载兼容性检查：`python -B chushou/scripts/test_hongguo_download.py`；只使用隔离合成数据。CI初始化并运行检查，CI配置存在不代表每个平台都已经实测通过。
 
 主要技能代码为MIT License；独立的 `scripts/hongguo_vendor/` 下载组件及其改动使用 GPL-3.0-only，全部对应源码和许可随包提供，详见其中的 `UPSTREAM.json` 与 `LICENSE`。不将该组件改授为MIT。
+
+云析使用 YunX-Desktop 1.3.4，按 AGPL-3.0 发布；对应源码、许可证和 Java 许可位于 `chushou/yunx-port/resources/yunx/`。Electron、FFmpeg 和其他依赖各自许可与声明随完整包提供，不能统一改授为 MIT。

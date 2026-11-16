@@ -89,7 +89,9 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                 partial, video = run_dir / "source.download.part", run_dir / "source.mp4"
                 transport = direct_download(media["url"], partial, "https://novelquickapp.com/", timeout)
                 key = media.get("key")
-                if key:
+                if key and hasattr(client, "prepare_episode"):
+                    client.prepare_episode(partial, video, key)
+                elif key:
                     # The source API supplied this playback key. Only local bytes
                     # reach FFmpeg; no external licence or alternate account is used.
                     command = [ffmpeg, "-nostdin", "-hide_banner", "-loglevel", "error", "-n",
@@ -106,7 +108,7 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                 manifest = {**identity, "schema_version": 1, "status": "downloaded", "created_at": now(),
                             "title": f"{series['title']} 第{number}集", "source_url": series["source_url"],
                             "request_sha256": request_hash, "sha256": digest(video), "bytes": video.stat().st_size,
-                            "download_mode": "hongguo_downloader_1_0_4", "output_path": str(video), "metadata": info,
+                            "download_mode": getattr(client, "download_mode", "fruitknife_2_0_0"), "output_path": str(video), "metadata": info,
                             "requested_quality": quality, "actual_quality": media["actual_quality"],
                             "quality_fallback": media["actual_quality"] != quality,
                             "transport": transport, "upstream_commit": UPSTREAM}
