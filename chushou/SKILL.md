@@ -86,7 +86,7 @@ description: 触手：短视频复刻与漫剧生产双线工作流。支持视�
 
 使用参考视频时执行本节；仅提供原创脚本时按原创入口处理，不要求视频下载、源帧或实测 PTS。
 
-1. 本地视频直接使用。链接或分享文案先读 [references/video-download.md](references/video-download.md)，Windows x64 普通短视频优先使用 [云析入口](yunx-port/launch.py)，按参考文档下载到当前项目 `downloads`；其他平台或云析不可用时使用 [scripts/download_video.py](scripts/download_video.py)，下载完成并校验后自动产出分析材料。红果剧名、分享链接、`series_id` 或指定集数先读 [references/hongguo-download.md](references/hongguo-download.md)，使用水果刀 2.0.0 核心的无界面入口搜索、核对剧集目录并选集下载；只有用户明确要求整部时才下载整部。普通网页解析失败时按迁移自玄念的主／备用解析站继续处理；不能把失败网页、封面、试看或未完整落盘的文件当作原片。下载器产生元数据、抽帧和音轨，不会自行写剧本。确认成功的本地视频路径后继续以下核对与分镜，不能停在「下载好了」。
+1. 本地视频直接使用。链接或分享文案先读 [references/video-download.md](references/video-download.md)，Windows x64 普通短视频优先使用 [云析入口](yunx-port/launch.py)，按参考文档下载到当前项目 `downloads`；其他平台或云析不可用时使用 [scripts/download_video.py](scripts/download_video.py)，下载完成并校验后自动产出分析材料。红果剧名、分享链接、`series_id` 或指定集数先读 [references/hongguo-download.md](references/hongguo-download.md)，使用 guoapp 2.0.1 红果模块的无界面入口搜索、核对剧集目录并选集下载；只有用户明确要求整部时才下载整部。普通网页解析失败时按迁移自玄念的主／备用解析站继续处理；不能把失败网页、封面、试看或未完整落盘的文件当作原片。下载器产生元数据、抽帧和音轨，不会自行写剧本。确认成功的本地视频路径后继续以下核对与分镜，不能停在「下载好了」。
    红果首次使用由随包的[scripts/chushou_runtime.py](scripts/chushou_runtime.py)自动初始化独立依赖与FFmpeg；依赖当前宿主的Python3.11+、Node.js22+、pip和公开网络，不依赖作者机器、旧技能目录或fruitknife私有仓库。用`--check`可检查就绪状态；未通过不冒称可用。分发包需包含该初始化脚本、下载模块、签名源码及依赖清单，并从无runtime的副本验收，不能只验证作者已安装环境。
 2. 核对视频、角色替换参考图和用户约束，先查当前对话与项目已有资产，已有参考图直接复用。
 3. 读取时长、分辨率、帧率和音轨，确认实际运动视频流，不能把附带封面当视频。低频抽帧仅用于全片总览；逐镜观察起点、中段、终点，快速动作以连续序列复核，按需加密到6–12fps，接触瞬间与疑似切点附近按原帧率复核。动态与切点依据真实解码时间，细节与质感依据清晰原分辨率帧，不能凭一张静帧猜整段动作。

@@ -1,4 +1,4 @@
-"""Fruitknife 2.0.0 core adapter; no fallback to the obsolete downloader."""
+"""guoapp 2.0.1+113 Hongguo adapter; no browser or private profile reuse."""
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import urllib.parse
 from download_video import DownloadError, extract_url, host_matches, safe_error
 
 ROOT = Path(__file__).resolve().parent
-UPSTREAM = "fruitknife-2.0.0-e8e350787aa2ac63cdab9febaa85837010a5052a"
+UPSTREAM = "guoapp-2.0.1-113-hongguo-1.0.3"
 QUALITIES = ("360p", "480p", "540p", "720p", "1080p")
 HOSTS = ("novelquickapp.com", "hongguoduanju.com", "fanqienovel.com", "fqnovel.com")
 
@@ -46,7 +46,7 @@ def parse_episodes(value, total, all_episodes=False):
 
 
 class HongguoClient:
-    download_mode = "fruitknife_2_0_0"
+    download_mode = "guoapp_2_0_1"
 
     def prepare_episode(self, source, destination, key):
         return self._call("prepare", source=str(source), destination=str(destination), key=key.hex())
@@ -54,6 +54,7 @@ class HongguoClient:
     def __init__(self, timeout=30):
         self.timeout = timeout
         self.episodes = {}
+        self.series_id = None
 
     def _call(self, action, **args):
         node = os.environ.get("SHENSI_NODE_PATH") or os.environ.get("CHUSHOU_NODE_PATH") or shutil.which("node")
@@ -61,7 +62,7 @@ class HongguoClient:
             raise DownloadError("红果下载需要 Node.js 22+；神思使用随包 Node，本地触手请安装 Node.js")
         env = {k: v for k, v in os.environ.items() if k not in ("NODE_OPTIONS", "NODE_PATH", "ELECTRON_RUN_AS_NODE")}
         result = subprocess.run([node, str(ROOT / "hongguo_vendor" / "cli.cjs")],
-                                input=json.dumps({"action": action, **args}, ensure_ascii=False),
+                                input=json.dumps({"action": action, "cacheFile": str(Path(os.environ.get("CHUSHOU_RUNTIME_ROOT", str(ROOT.parent / "runtime"))).resolve() / "hongguo" / "device.json"), **args}, ensure_ascii=False),
                                 capture_output=True, text=True, encoding="utf-8", errors="replace",
                                 timeout=max(60, self.timeout * 10), shell=False, env=env)
         if result.returncode:
@@ -72,10 +73,10 @@ class HongguoClient:
             raise DownloadError("红果下载器未返回有效JSON") from exc
 
     def search(self, keyword, cursor=""):
-        result = self._call("search", keyword=keyword, cursor=cursor)
+        result = self._call("search", keyword=keyword, cursor=cursor or "1")
         return {"status": "search_ready", "provider": "hongguo", "keyword": keyword,
                 "items": result.get("items", []), "cursor": str(result.get("nextOffset", 0)),
-                "has_more": bool(result.get("hasMore")), "upstream_commit": UPSTREAM}
+                "has_more": bool(result.get("hasMore")), "warning": result.get("warning") or None, "upstream_commit": UPSTREAM}
 
     def inspect(self, source):
         if not is_hongguo_source(source):
@@ -85,6 +86,7 @@ class HongguoClient:
         if not episodes or any(not re.fullmatch(r"\d{6,25}", str(e.get("vid", ""))) for e in episodes):
             raise DownloadError("红果未返回有效集表")
         self.episodes = {str(e["vid"]): e for e in episodes}
+        self.series_id = result["series_id"]
         return {"provider": "hongguo", "series_id": result["series_id"], "title": result["series_title"],
                 "source_url": extract_url(source) if not str(source).strip().isdigit() else None,
                 "total_episodes": len(episodes), "episodes": [{"episode": i, "video_id": str(e["vid"]),
@@ -95,6 +97,7 @@ class HongguoClient:
         episode = self.episodes.get(str(video_id))
         if not episode:
             raise DownloadError("请先核对集表，再取流")
-        result = self._call("resolve", videoId=str(video_id), contentType=episode.get("content_type"))
+        result = self._call("resolve", videoId=str(video_id), seriesId=self.series_id)
         return {"url": result["url"], "key": bytes.fromhex(result["key"]) if result.get("key") else None,
-                "actual_quality": "source-best", "reported_duration_seconds": episode.get("duration") or None}
+                "referer": result.get("referer"), "actual_quality": str(result.get("quality") or "source-best"),
+                "reported_duration_seconds": result.get("duration") or None}

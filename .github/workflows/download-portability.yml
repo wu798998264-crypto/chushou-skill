@@ -5,12 +5,12 @@ on:
   push:
     paths:
       - 'chushou/scripts/**'
-      - 'chushou/references/fruitknife-*'
+      - 'chushou/references/hongguo-*'
       - '.github/workflows/download-portability.yml'
   pull_request:
     paths:
       - 'chushou/scripts/**'
-      - 'chushou/references/fruitknife-*'
+      - 'chushou/references/hongguo-*'
       - '.github/workflows/download-portability.yml'
 
 permissions:
@@ -28,9 +28,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install without author runtime or credentials
-        run: python -I chushou/scripts/fruitknife_runtime.py --install
+        run: python -I chushou/scripts/chushou_runtime.py --install
       - name: Check runtime
-        run: python -I chushou/scripts/fruitknife_runtime.py --check
+        run: python -I chushou/scripts/chushou_runtime.py --check
       - name: Download, decode, resume and extract local test videos
-        run: python -I chushou/scripts/test_fruitknife_download.py
+        run: python -I chushou/scripts/test_hongguo_download.py
+      - name: Real requested episode download and full decode
+        run: python -I chushou/scripts/verify_hongguo_real.py --output proof
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-download-${{ matrix.os }}
+          path: proof/*.json

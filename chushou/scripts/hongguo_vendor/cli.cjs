@@ -1,18 +1,19 @@
-// GPL-3.0-only. JSON stdin/stdout boundary; called only by hongguo_provider.py.
-const fs=require('node:fs'),api=require('./hongguo.js');
-console.warn=(...v)=>process.stderr.write(v.join(' ')+'\n');
-(async()=>{
+// GPL-3.0-only. JSON subprocess boundary; playback material stays on stdin/stdout.
+const fs=require('node:fs'),path=require('node:path');
+try{
  const raw=fs.readFileSync(0,'utf8');if(Buffer.byteLength(raw)>32768)throw Error('请求过大');const p=JSON.parse(raw);let result;
- if(p.action==='inspect'){const id=await api.resolveSeriesId(p.source);result=await api.fetchEpisodeList(id);}
- else if(p.action==='search')result=await api.searchSeries(p.keyword,{offset:Number(p.cursor||0)});
- else if(p.action==='resolve'){
-  if(!/^\d{6,25}$/.test(p.videoId))throw Error('无效视频编号');const v=await api.fetchPlayUrlSingle(p.videoId,p.contentType,'hevc');
-  if(!v.url||/bytevc2|bvc2/i.test(v.codec||''))throw Error('未取得标准播放器可解码的播放流');
-  const key=v.spadeA?api.deriveKey(v.spadeA):null;if(v.spadeA&&(!key||key.length!==16))throw Error('播放密钥未通过校验');
-  result={url:v.url,key:key?.toString('hex')||null,codec:v.codec,content_type:v.content_type};
- }else if(p.action==='prepare'){
+ if(p.action==='prepare'){
   if(!/^[a-f0-9]{32}$/.test(p.key)||!require('node:path').isAbsolute(p.source)||!require('node:path').isAbsolute(p.destination)||fs.existsSync(p.destination))throw Error('播放准备参数无效或目标已存在');
-  api.decryptMp4File(p.source,p.destination,Buffer.from(p.key,'hex'));result={prepared:true};
- }else throw Error('不支持的下载动作');
+  require('./playback.cjs').decryptMp4File(p.source,p.destination,Buffer.from(p.key,'hex'));result={prepared:true};
+ }else{
+  const {api,seriesId}=require('./guoapp-host.cjs').createProvider({cacheFile:p.cacheFile});
+  if(p.action==='search'){const page=Number(p.cursor||1);if(!Number.isInteger(page)||page<1||page>100)throw Error('无效搜索页');const found=api.search(page,p.keyword);result={items:found.items.filter(v=>/^\d{6,25}$/.test(v.sourceId)).map(v=>({series_id:v.sourceId,title:v.title,total_episodes:Number(v.episodeCount)||null,description:v.intro,cover:v.cover})),nextOffset:found.hasMore?page+1:0,hasMore:found.hasMore,warning:found.warning};}
+  else if(p.action==='inspect'){const id=seriesId(p.source),detail=api.detail(id);result={series_id:id,series_title:detail.drama.title,episodes:detail.chapters.map(c=>({vid:c.videoUrl.slice('hongguo-cenc://'.length),vid_index:c.currentEpisode,title:c.title}))};}
+  else if(p.action==='resolve'){
+   if(!/^\d{6,25}$/.test(p.videoId)||!/^\d{6,25}$/.test(p.seriesId))throw Error('无效剧集编号');
+   const v=api.resolveMedia({dramaId:'hongguo:'+p.seriesId,chapter:{videoUrl:'hongguo-cenc://'+p.videoId}}),key=v.cencKey?Buffer.from(v.cencKey,'base64'):null;if(key&&key.length!==16)throw Error('播放参数校验失败');
+   result={url:v.url,referer:v.referer,key:key?.toString('hex')||null,quality:v.quality,duration:v.durationMs/1000};
+  }else throw Error('不支持的下载动作');
+ }
  process.stdout.write(JSON.stringify(result));
-})().catch(error=>{process.stderr.write(String(error.message||error).replace(/https?:\/\/\S+/g,'[URL]').slice(-1800)+'\n');process.exitCode=2;});
+}catch(error){process.stderr.write(String(error.message||error).replace(/https?:\/\/\S+/g,'[URL]').slice(-1800)+'\n');process.exitCode=2;}

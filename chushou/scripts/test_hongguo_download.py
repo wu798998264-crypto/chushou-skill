@@ -32,11 +32,11 @@ class HongguoTests(unittest.TestCase):
         with self.assertRaises(DownloadError):
             client.resolve_episode("9999999999999999999")
 
-    def test_native_signer_and_network_boundary(self):
+    def test_module_adapter_and_network_boundary(self):
         node = shutil.which("node")
         self.assertTrue(node, "Node.js 22+ is required")
         vendor = Path(__file__).resolve().parent / "hongguo_vendor"
-        source = "const {coreSixgod}=require('./sixgod');const a=coreSixgod({surl:'https://example.com/test',params:{aid:'8662'},devices:{},header:{},now:1700000000,rng:()=>1});if(!a.headers['x-gorgon']||!a.headers['x-medusa'])process.exit(2);require('./http.cjs').get('http://127.0.0.1/').then(()=>process.exit(3),()=>process.stdout.write('blocked'));"
+        source = "const assert=require('node:assert/strict');const {allowed}=require('./guoapp-http.cjs');const {base64Decode,preserveIntegers}=require('./guoapp-host.cjs');assert.throws(()=>allowed('http://127.0.0.1/'));assert.throws(()=>base64Decode('{bad json}'));assert.equal(JSON.parse(preserveIntegers('{\"id\":7690184933037329432}')).id,'7690184933037329432');process.stdout.write('blocked');"
         result = subprocess.run([node, "-e", source], cwd=vendor, capture_output=True, text=True, timeout=20)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "blocked")

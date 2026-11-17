@@ -4,6 +4,8 @@
 
 ## 安装
 
+**v1.8.2 短剧更新**：使用 guoapp 2.0.1+113 的 GPL-3.0 红果模块，替换原短剧网络实现。保留选集、完整音视频解码、SHA-256、断点恢复和白板回写。Windows 与 macOS 共用可移植源码，发布包分别附带安装说明；需要 Python 3.11+、Node.js 22+，媒体依赖用 `python -B chushou/scripts/chushou_runtime.py --install` 安装。短剧不依赖云析 Windows 运行库，也不需要作者的账号或 Cookie。上游拒绝、限流或不提供媒体时会明确失败，不自动轮换设备重试。
+
 Windows x64 建议下载 [Windows 发布包](https://github.com/wu798998264-crypto/chushou-skill/releases/latest)，解压后将其中的 `chushou` 文件夹放进 `%USERPROFILE%\.codex\skills\`。包内包含云析 Java 核心和隔离 Electron 浏览器；需要 Python 3.11+，并单独安装 FFmpeg 和 FFprobe。已有同名技能请先备份，再合并安装。公开短视频可使用云析解析，遇验证码、登录或失效链接按实际情况处理。
 
 也可以获取仓库源码：

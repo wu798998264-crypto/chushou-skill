@@ -1,23 +1,22 @@
 {
-  "name": "fruitknife",
-  "version": "2.0.0",
-  "homepage": "https://github.com/wu798998264-crypto/fruitknife",
-  "commit": "e8e350787aa2ac63cdab9febaa85837010a5052a",
+  "name": "guoapp",
+  "version": "2.0.1+113",
+  "moduleVersion": "1.0.3",
+  "homepage": "https://github.com/Xanerix/guoapp",
+  "commit": "4c7aab6a87a12e1aaf6b1d08fa31d3844148650c",
   "license": "GPL-3.0-only",
-  "source": "Fruitknife v2.0.0 GitHub release and matching electron-build/patches/hongguo.js; desktop executable not run",
-  "archiveSha256": "314a0ef955baa5a3fcd3b64cd890f20f15ec197f9d64fd3bbec86289f35dc22b",
-  "changes": [
-    "Separate JSON subprocess adapter",
-    "Fruitknife 2.0 suggest search, detail enrichment, native CENC playback preparation; old directory name retained for compatibility",
-    "Native fetch replaces axios; host allowlist and bounded transport",
-    "branch_one.bin stored as equivalent Base64 text",
-    "No Electron updater, GUI, browser accounts or vendor node_modules bundled"
-  ],
+  "source": "User-supplied Windows ZIP: userdata/modules/hongguo/main.js and manifest.json only; user stores excluded",
+  "archiveSha256": "d63d768efef183abfcecbdf40cc434d7f56d8fd3dfc0c3d27f7b0be699fb29a2",
+  "macArchiveSha256": "065f97c12c3e7cbcc54ed295400382125fe1ccf34f7335975a890a219052743f",
   "originalSourceHashes": {
-    "hongguo.js": "f16b6e40c7b18f099bc05d0b023d0ee2802679cbb0f8d25b6e90f961700cf3ae",
-    "xgorgon.js": "9934b3dcd34523ba0df98553ee9a08da5ccc9e5930db0b9ab411bfa292c8c91b",
-    "sixgod/index.js": "08182304e96199f3458cc6c755d1619fb58c14c48f87659d3b7af4c8afb44dda",
-    "sixgod/extra.js": "b3527ad293a554914db0c7bfc45aadd0dde056587d7072d206dcd2935a03275d",
-    "sixgod/branch_one.bin": "239ddf955d14a008311b8c3adcf05713b858954068fff02ab19c2ba81e31d1d3"
-  }
+    "main.js": "3ed3be89dffa6f710987e59a95a8e4f60345ba92c6033fe77f44bd1430d48760"
+  },
+  "changes": [
+    "Node standard-library host instead of Flutter/Go; strict Base64 and lossless integer parsing match original host",
+    "Expose video-only search; listening-book search stays outside short-drama scope",
+    "No device rotation after empty or rejected responses; HTTP authorization/rate limits stop immediately",
+    "Original module APIs, parameters, media selection and identity checks retained",
+    "Private local anonymous device cache; no imported cookies, accounts, favorite/history data",
+    "playback.cjs retains only previously validated local MP4 preparation from fruitknife 2.0.0, commit e8e350787aa2ac63cdab9febaa85837010a5052a; no old network code"
+  ]
 }
