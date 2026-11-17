@@ -31,4 +31,4 @@ try:
                       elapsedSeconds=round(time.monotonic()-started, 3), replayed=True)
 finally:
     (output / ('real-'+sys.platform+'.json')).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(json.dumps(report, ensure_ascii=False))
+    print(json.dumps(report, ensure_ascii=True))
