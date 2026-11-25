@@ -111,7 +111,7 @@ def download_selection(source, out_dir, episodes=None, all_episodes=False, quali
                             "download_mode": getattr(client, "download_mode", "guoapp_2_0_1"), "output_path": str(video), "metadata": info,
                             "requested_quality": quality, "actual_quality": media["actual_quality"],
                             "quality_fallback": media["actual_quality"] != quality,
-                            "transport": transport, "upstream_commit": UPSTREAM}
+                            "transport": transport, "source_route": media.get("source_route"), "upstream_commit": UPSTREAM}
                 manifest_path = run_dir / "manifest.json"
                 write_new_json(manifest_path, manifest)
                 if partial.exists():

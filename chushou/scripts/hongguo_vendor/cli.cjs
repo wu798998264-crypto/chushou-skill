@@ -12,7 +12,7 @@ try{
   else if(p.action==='resolve'){
    if(!/^\d{6,25}$/.test(p.videoId)||!/^\d{6,25}$/.test(p.seriesId))throw Error('无效剧集编号');
    const v=api.resolveMedia({dramaId:'hongguo:'+p.seriesId,chapter:{videoUrl:'hongguo-cenc://'+p.videoId}}),key=v.cencKey?Buffer.from(v.cencKey,'base64'):null;if(key&&key.length!==16)throw Error('播放参数校验失败');
-   result={url:v.url,referer:v.referer,key:key?.toString('hex')||null,quality:v.quality,duration:v.durationMs/1000};
+   result={url:v.url,referer:v.referer,key:key?.toString('hex')||null,quality:v.quality,duration:v.durationMs/1000,sourceRoute:v.sourceRoute||'web_page'};
   }else throw Error('不支持的下载动作');
  }
  process.stdout.write(JSON.stringify(result));

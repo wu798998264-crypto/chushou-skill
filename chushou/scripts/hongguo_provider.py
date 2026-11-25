@@ -1,4 +1,4 @@
-"""guoapp 2.0.1+113 Hongguo adapter; no browser or private profile reuse."""
+"""Fruitknife 3.1.2 playback adapter; no browser or private profile reuse."""
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import urllib.parse
 from download_video import DownloadError, extract_url, host_matches, safe_error
 
 ROOT = Path(__file__).resolve().parent
-UPSTREAM = "guoapp-2.0.1-113-hongguo-1.0.3"
+UPSTREAM = "fruitknife-3.1.2-hongguo-1.0.11"
 QUALITIES = ("360p", "480p", "540p", "720p", "1080p")
 HOSTS = ("novelquickapp.com", "hongguoduanju.com", "fanqienovel.com", "fqnovel.com")
 
@@ -46,7 +46,7 @@ def parse_episodes(value, total, all_episodes=False):
 
 
 class HongguoClient:
-    download_mode = "guoapp_2_0_1"
+    download_mode = "fruitknife_3_1_2"
 
     def prepare_episode(self, source, destination, key):
         return self._call("prepare", source=str(source), destination=str(destination), key=key.hex())
@@ -100,4 +100,5 @@ class HongguoClient:
         result = self._call("resolve", videoId=str(video_id), seriesId=self.series_id)
         return {"url": result["url"], "key": bytes.fromhex(result["key"]) if result.get("key") else None,
                 "referer": result.get("referer"), "actual_quality": str(result.get("quality") or "source-best"),
-                "reported_duration_seconds": result.get("duration") or None}
+                "reported_duration_seconds": result.get("duration") or None,
+                "source_route": result.get("sourceRoute")}

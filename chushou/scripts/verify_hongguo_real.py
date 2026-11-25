@@ -19,12 +19,14 @@ started = time.monotonic()
 report = {'passed': False, 'platform': sys.platform, 'arch': platform.machine(), 'realDownload': True}
 try:
     with tempfile.TemporaryDirectory(prefix='chushou-real-') as folder:
-        result = download_selection('7690184933037329432', Path(folder), '1')
+        result = download_selection('https://novelquickapp.com/s/yDbLcIG8yxg/', Path(folder), '1')
         assert result['metadata']['validation'] == 'full_video_and_available_audio_decode'
-        assert result['metadata']['duration_seconds'] > 330
+        assert result['series_id'] == '7704683516834892825'
+        assert result['episodes'][0]['video_id'] == '7704685770241477657'
+        assert result['metadata']['duration_seconds'] > 120
         assert result['metadata']['has_audio']
         assert result['completed_episodes'] == 1
-        replay = download_selection('7690184933037329432', Path(folder), '1')
+        replay = download_selection('https://novelquickapp.com/s/yDbLcIG8yxg/', Path(folder), '1')
         assert replay['status'] == 'reused'
         report.update(passed=True, title=result['title'], metadata=result['metadata'],
                       sha256=result['episodes'][0]['sha256'], bytes=Path(result['video']).stat().st_size,

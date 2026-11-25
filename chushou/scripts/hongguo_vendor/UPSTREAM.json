@@ -1,21 +1,35 @@
 {
   "name": "guoapp",
-  "version": "2.0.1+113",
-  "moduleVersion": "1.0.3",
+  "version": "2.0.3+115",
+  "moduleVersion": "1.0.7",
   "homepage": "https://github.com/Xanerix/guoapp",
-  "commit": "4c7aab6a87a12e1aaf6b1d08fa31d3844148650c",
+  "commit": "cdf8a24b83df522aeceff860b45f1cb2efa2f286",
+  "moduleRepository": "https://github.com/guoapp-modules/hongguo",
+  "appRelease": "https://github.com/Xanerix/guoapp/releases/tag/app-v2.0.3-115",
   "license": "GPL-3.0-only",
-  "source": "User-supplied Windows ZIP: userdata/modules/hongguo/main.js and manifest.json only; user stores excluded",
+  "source": "Official guoapp build-referenced Hongguo module repository, fixed commit; prior user-supplied archives retained as provenance, no user stores included",
   "archiveSha256": "d63d768efef183abfcecbdf40cc434d7f56d8fd3dfc0c3d27f7b0be699fb29a2",
   "macArchiveSha256": "065f97c12c3e7cbcc54ed295400382125fe1ccf34f7335975a890a219052743f",
   "originalSourceHashes": {
-    "main.js": "3ed3be89dffa6f710987e59a95a8e4f60345ba92c6033fe77f44bd1430d48760"
+    "main.js": "457f75b556cb0fb6f103b91fd9831f173ecbfdb266fa0bfe16f292d88a0a7b24"
+  },
+  "playbackUpdate": {
+    "name": "fruitknife",
+    "version": "3.1.2",
+    "moduleVersion": "1.0.11",
+    "release": "https://github.com/wu798998264-crypto/fruitknife/releases/tag/v3.1.2",
+    "archive": "fruitknife-3.1.2-win.zip",
+    "archiveSha256": "4b8164b7d89a92db456833287af4ab25a5c8633bd0861838f4140d254a26115a",
+    "moduleSha256": "55e4bda845270c9f07d45a4bda27aa4ed9b8538744c87a0f882df3af173f9d94",
+    "scope": "Six bounded App routes, gzip playback requests and website fallback-play-info; no user state or cookies imported",
+    "adaptation": "Persist route preference and two-empty-round 30-minute circuit across CLI calls; preserve rejection/identity protections; measure actual video dimensions after full decode"
   },
   "changes": [
     "Node standard-library host instead of Flutter/Go; strict Base64 and lossless integer parsing match original host",
     "Expose video-only search; listening-book search stays outside short-drama scope",
     "No device rotation after empty or rejected responses; HTTP authorization/rate limits stop immediately",
     "Original module APIs, parameters, media selection and identity checks retained",
+    "Module 1.0.7 video_tab entry and compatible fallback; SHA-512/AES-CBC host helpers; fallback network limited to vas-lf-x.snssdk.com/video/fplay/",
     "Private local anonymous device cache; no imported cookies, accounts, favorite/history data",
     "playback.cjs retains only previously validated local MP4 preparation from fruitknife 2.0.0, commit e8e350787aa2ac63cdab9febaa85837010a5052a; no old network code"
   ]
